@@ -1,0 +1,13 @@
+# Deploy ONLY the Next.js marketing site in /marketing.
+# The Expo mobile app at the repo root is never built or published here.
+#
+# Do not set Build = "expo export -p web" or Publish = "dist" in the dashboard;
+# those will break (Supabase/AsyncStorage + Node prerender). Clear any old overrides.
+
+[build]
+  base = "marketing"
+  command = "npm install && npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "20"

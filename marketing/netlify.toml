@@ -1,3 +1,6 @@
+# Local Netlify CLI (`netlify dev`) from this folder.
+# CI production builds use the repo-root /netlify.toml, which sets base = "marketing".
+
 [build]
   command = "npm install && npm run build"
   publish = "out"

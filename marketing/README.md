@@ -26,16 +26,16 @@ Static files are written to **`marketing/out/`**.
 
 ## Deploy on Netlify
 
-You already have a Netlify site. Point it at this folder:
+The repo has a **root** **`netlify.toml`** with `base = "marketing"` so Netlify always builds the Next app (not Expo). **`marketing/netlify.toml`** is only for local `netlify dev` from inside `marketing/`.
 
-1. **Site settings → Build & deploy → Continuous deployment → Build settings**
-2. **Base directory:** `marketing`
-3. **Build command:** `npm install && npm run build`  
-   (Or leave blank if you rely on `marketing/netlify.toml`.)
-4. **Publish directory:** `out`  
-   (If the UI asks for a path **relative to the base directory**, use `out`, not `marketing/out`.)
+### Dashboard (clear old Expo settings)
 
-Optional: commit **`marketing/netlify.toml`** — it sets `publish = "out"` and `NODE_VERSION = "20"`.
+1. **Site configuration → Build & deploy → Build settings**
+2. **Base directory:** leave **empty** (the root `netlify.toml` already sets `base = "marketing"`), **or** set to `marketing` — both work; if you set base in the UI, ensure **Publish directory** is `out` (relative to that base).
+3. **Build command:** leave **empty** to use the file, **or** `npm install && npm run build`
+4. **Publish directory:** leave **empty** to use the file, **or** `out` (when base is `marketing`)
+
+**Remove any overrides:** delete `expo export -p web`, `dist`, or custom env vars like `NETLIFY_BUILD_COMMAND` that force Expo. The **`window is not defined`** error comes from Expo web export + Supabase in Node — this marketing stack does not run that code path.
 
 ### Waitlist form (Netlify Forms)
 
