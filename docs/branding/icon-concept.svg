@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <rect width="1024" height="1024" fill="#070A12"/>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0B1020"/>
+      <stop offset="40%" stop-color="#3B6CFF"/>
+      <stop offset="100%" stop-color="#38D9FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Abstract voice arcs  designer-facing concept only -->
+  <path d="M200 640 Q 512 280, 824 640" stroke="url(#g)" stroke-width="48" stroke-linecap="round" fill="none"/>
+  <path d="M260 640 Q 512 400, 764 640" stroke="url(#g)" stroke-width="32" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M320 640 Q 512 480, 704 640" stroke="#38D9FF" stroke-width="20" stroke-linecap="round" fill="none" opacity="0.45"/>
+</svg>

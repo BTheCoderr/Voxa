@@ -1,0 +1,7 @@
+# Minimal Supabase config for Edge Functions.
+# Run `supabase init` / `supabase link` locally for a full database development stack.
+
+project_id = "voxa"
+
+[functions.realtime-session]
+verify_jwt = true

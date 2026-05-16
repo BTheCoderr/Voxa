@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128" viewBox="0 0 512 128" fill="none">
+  <defs>
+    <linearGradient id="w" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B6CFF"/>
+      <stop offset="55%" stop-color="#38D9FF"/>
+      <stop offset="100%" stop-color="#38D9FF" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>
+  <text x="32" y="86" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="600" fill="url(#w)" letter-spacing="0.02em">Voxa</text>
+  <rect x="32" y="104" width="120" height="3" rx="1.5" fill="#38D9FF" fill-opacity="0.5"/>
+</svg>
