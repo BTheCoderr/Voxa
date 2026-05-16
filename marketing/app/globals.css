@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply min-h-screen bg-void text-text antialiased;
+}
+
+.glass {
+  @apply border border-white/10 bg-white/[0.05] shadow-glass backdrop-blur-xl;
+}
+
+.glass-strong {
+  @apply border border-white/[0.14] bg-white/[0.07] shadow-glass backdrop-blur-2xl;
+}
+
+.text-gradient {
+  @apply bg-gradient-cta bg-clip-text text-transparent;
+}
