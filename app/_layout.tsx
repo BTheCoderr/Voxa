@@ -83,6 +83,7 @@ function RootStack() {
       <ThemeProvider value={VoxaNavigationTheme}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.void } }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="auth" options={{ headerShown: false }} />
           <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(app)" />

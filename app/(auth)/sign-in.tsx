@@ -10,6 +10,7 @@ import { VoxaText } from '@/components/ui/VoxaText';
 import { palette, spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
 import { env } from '@/lib/env';
+import { getAuthMagicLinkRedirectUrl } from '@/lib/auth/magicLinkRedirect';
 import { supabase } from '@/lib/supabase/client';
 
 export default function SignInScreen() {
@@ -57,7 +58,7 @@ export default function SignInScreen() {
               const { error } = await supabase.auth.signInWithOtp({
                 email: email.trim(),
                 options: {
-                  emailRedirectTo: 'voxa://',
+                  emailRedirectTo: getAuthMagicLinkRedirectUrl(),
                 },
               });
               setBusy(false);
