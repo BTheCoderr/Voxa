@@ -55,10 +55,15 @@ export default function SignInScreen() {
               }
               trackEvent('sign_in_started', { method: 'magic_link' });
               setBusy(true);
+              const redirectTo = getAuthMagicLinkRedirectUrl();
+              if (__DEV__) {
+                // eslint-disable-next-line no-console
+                console.log('[auth] signInWithOtp emailRedirectTo →', redirectTo);
+              }
               const { error } = await supabase.auth.signInWithOtp({
                 email: email.trim(),
                 options: {
-                  emailRedirectTo: getAuthMagicLinkRedirectUrl(),
+                  emailRedirectTo: redirectTo,
                 },
               });
               setBusy(false);
