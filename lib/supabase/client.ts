@@ -19,6 +19,9 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
+    /** Native: we handle `voxa://` in `app/auth/callback`. Avoid auto-parsing random URLs. */
     detectSessionInUrl: false,
+    /** Hash/token deep links for `voxa://auth/callback`; keep explicit (also default in supabase-js). */
+    flowType: 'implicit',
   },
 });

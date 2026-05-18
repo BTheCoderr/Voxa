@@ -1,24 +1,26 @@
 # Voxa — Supabase auth redirects (magic link)
 
-Magic links use **`emailRedirectTo`** → in-app route **`auth/callback`**, which parses tokens and calls `supabase.auth.setSession` (or `exchangeCodeForSession` for PKCE).
+## First checks if links still open Netlify
 
-**Implementation:** `getAuthMagicLinkRedirectUrl()` in `lib/auth/magicLinkRedirect.ts` (native = **`voxa://auth/callback`** by default), screen: `app/auth/callback.tsx`.
+1. **Request a brand-new magic link** after deploying this app version. Old emails bake in the old `redirect_to` forever.
+2. **Supabase → Authentication → Email templates → Magic link**  
+   The button/link **must** use **`{{ .ConfirmationURL }}`** (or the documented confirmation link variable).  
+   If the template uses **`{{ .SiteURL }}`**, **`https://…netlify…`**, or a hardcoded marketing URL, the app will **never** receive `voxa://` — Supabase is not choosing Netlify; **the template is.**
+3. **Redeploy Netlify** so `https://voxxa.netlify.app/auth/callback` exists (bridge page). Until then you get **404** from the marketing site.
 
 ---
 
+Magic links use **`emailRedirectTo`** → in-app **`auth/callback`**, which parses tokens and calls `supabase.auth.setSession` (or `exchangeCodeForSession` if you ever switch flows).
+
+**Implementation:** `getAuthMagicLinkRedirectUrl()` uses **`Linking.createURL('auth/callback')`** then normalizes `voxa:/…` → **`voxa://…`**. Screen: `app/auth/callback.tsx`.
+
 ## Why the browser opened Netlify (`https://…/auth/callback`) instead of the app
 
-1. **`emailRedirectTo` was not allowed.**  
-   Supabase only redirects to URLs listed under **Authentication → URL Configuration → Redirect URLs**.  
-   If `voxa://auth/callback` is missing, GoTrue may **ignore** the client redirect and use **Site URL** instead (often your marketing site).
+1. **`redirect_to` not allowed or wrong string** — If the value sent to GoTrue does not exactly match an entry in **Redirect URLs**, the server may fall back to **Site URL** (your Netlify homepage host).
+2. **`voxa:/auth/callback` vs `voxa://auth/callback`** — Expo’s `createURL` can emit a single slash; we normalize for custom schemes.
+3. **Site URL** = `https://voxxa.netlify.app/` — This is only the **default** when GoTrue discards or replaces the requested redirect — it does not “override” a valid `voxa://` template link if the **email** still contains the correct confirmation URL.
 
-2. **Scheme / slash mismatch.**  
-   `Linking.createURL('auth/callback')` can produce **`voxa:/auth/callback`** (single slash after the scheme). Your dashboard may only list **`voxa://auth/callback`**. Treating them as different strings can cause the redirect to be rejected → **fallback to Site URL**.
-
-3. **Site URL is your marketing domain.**  
-   If **Site URL** = `https://voxxa.netlify.app`, that becomes the default “safe” redirect when the requested URL is not permitted.
-
-**Fix:** Add the exact native URL(s) below to **Redirect URLs**, and optionally keep the Netlify URL as a **fallback bridge** (see Marketing site).
+**Fix:** Allow-list **`voxa://auth/callback`**, fix **email template**, **normalize** redirect (done in code), request a **new** email.
 
 ---
 
@@ -28,31 +30,22 @@ Magic links use **`emailRedirectTo`** → in-app route **`auth/callback`**, whic
 
 | URL | Purpose |
 |-----|---------|
-| **`voxa://auth/callback`** | **Required** — iOS/Android TestFlight, dev client, production (matches `app.json` `scheme`) |
-| `voxa:/auth/callback` | Optional — if you ever see this variant from `Linking.createURL` |
-| `https://YOUR_NETLIFY_HOST/auth/callback` | Optional — fallback page that forwards to `voxa://…` (see `/marketing/app/auth/callback`) |
-| `exp://127.0.0.1:8081/--/auth/callback` | Optional — local Expo Go / Metro (changes per machine; log in dev) |
+| **`voxa://auth/callback`** | **Required** — iOS/Android dev client, TestFlight, production |
+| `https://voxxa.netlify.app/auth/callback` | **Optional** — HTTPS bridge (forwards to `voxa://`; redeploy marketing so it is not 404) |
+| `exp://…` / dev URLs | Optional — log **`[auth] emailRedirectTo`** from Metro when using Expo dev client |
 
 ### Site URL
 
-- Can remain **`https://your-marketing-site.netlify.app`** for email templates and web.
-- **Do not rely on Site URL alone** for mobile: mobile magic links must use **`voxa://auth/callback`** in the allow list, or users stay in the browser.
-
-### Debug the value sent from the app
-
-On a **native** build, after tapping “Send magic link”, check Metro logs:
-
-```text
-[auth] emailRedirectTo canonical (sent to Supabase) → voxa://auth/callback
-```
-
-Override (EAS / `.env`): **`EXPO_PUBLIC_AUTH_REDIRECT_NATIVE=voxa://auth/callback`**
+Keeping **`https://voxxa.netlify.app/`** is fine for a marketing **default**. Mobile magic links still need **`voxa://auth/callback`** in **Redirect URLs** + correct **email template**.
 
 ---
 
-## Marketing site fallback (`/auth/callback`)
+## Implementation details
 
-If an email still opens **`https://…/auth/callback`** on Netlify, that route **forwards** `search` + `hash` (tokens) to **`voxa://auth/callback`**, so the OS can open the app. Redeploy marketing after adding this page.
+- **Client:** `lib/auth/magicLinkRedirect.ts` — `Linking.createURL` + normalization.
+- **Auth client:** `flowType: 'implicit'` in `lib/supabase/client.ts` (explicit; hash tokens on deep link).
+- **Sign-in:** logs `emailRedirectTo` in dev; `trackEvent('sign_in_magic_link_redirect_to', { redirect_prefix })` for analytics.
+- **Marketing fallback:** `marketing/app/auth/callback/page.tsx` — **redeploy Netlify** to clear 404.
 
 ---
 
@@ -62,5 +55,5 @@ If an email still opens **`https://…/auth/callback`** on Netlify, that route *
 
 ## Troubleshooting
 
-- **404 on Netlify:** Deploy latest marketing with `app/auth/callback/page.tsx`, or remove Netlify from the magic-link path by fixing Redirect URLs + native `emailRedirectTo`.
-- **Blank native screen:** Callback route or session parse — see `app/auth/callback.tsx`.
+- **404 on Netlify:** Deploy latest `marketing` build with `/auth/callback`.
+- **Still HTTPS after new email:** Inspect template → must be `{{ .ConfirmationURL }}`.

@@ -13,12 +13,25 @@ function resolveAppScheme(): string {
 }
 
 /**
- * Canonical deep link for Expo Router route `app/auth/callback`.
- * Always use **two slashes** after the scheme (`voxa://auth/callback`) so it matches iOS expectations
- * and Supabase "Redirect URLs" entries exactly.
+ * `Linking.createURL` can return `voxa:/auth/callback` (one slash). Supabase allow-list and iOS
+ * expect `voxa://auth/callback`. Mismatch → GoTrue may fall back to **Site URL** (Netlify).
+ */
+function normalizeCustomSchemeRedirect(url: string, scheme: string): string {
+  const double = `${scheme}://`;
+  const single = `${scheme}:/`;
+  if (url.startsWith(double)) return url;
+  if (url.startsWith(single)) return double + url.slice(single.length);
+  return url;
+}
+
+/**
+ * Must match `app/auth/callback` and Supabase **Authentication → Redirect URLs**.
  *
- * Supabase: if `emailRedirectTo` is **not** in the allow list, GoTrue may fall back to **Site URL**
- * (e.g. `https://voxxa.netlify.app`) — which opens the marketing site instead of the app.
+ * **Always starts from `Linking.createURL('auth/callback')`** (per Expo linking contract), then
+ * normalizes custom-scheme slashes so Supabase receives `voxa://auth/callback`, not `voxa:/…`.
+ *
+ * If `voxa://auth/callback` is missing from Redirect URLs, or the **email template** does not use
+ * `{{ .ConfirmationURL }}`, users may still land on **Site URL** (`https://voxxa.netlify.app/...`).
  */
 export function getAuthMagicLinkRedirectUrl(): string {
   if (Platform.OS === 'web') {
@@ -40,21 +53,17 @@ export function getAuthMagicLinkRedirectUrl(): string {
   }
 
   const scheme = resolveAppScheme();
-
-  const generated = Linking.createURL('auth/callback', { scheme });
-  const canonical = `${scheme}://auth/callback`;
+  const fromExpo = Linking.createURL('auth/callback', { scheme });
+  const redirectTo = ['http', 'https', 'exp'].some((p) => fromExpo.startsWith(`${p}://`))
+    ? fromExpo
+    : normalizeCustomSchemeRedirect(fromExpo, scheme);
 
   if (__DEV__) {
     // eslint-disable-next-line no-console
-    console.log('[auth] emailRedirectTo Linking.createURL →', generated);
+    console.log('[auth] emailRedirectTo Linking.createURL (raw) →', fromExpo);
     // eslint-disable-next-line no-console
-    console.log('[auth] emailRedirectTo canonical (sent to Supabase) →', canonical);
+    console.log('[auth] emailRedirectTo (sent to Supabase signInWithOtp) →', redirectTo);
   }
 
-  /**
-   * Prefer canonical `scheme://auth/callback`:
-   * - `createURL` can yield `voxa:/auth/callback` (single slash) depending on host URI; Supabase allow-list
-   *   often expects `voxa://auth/callback`. Mismatch → redirect can fall back to Site URL (Netlify).
-   */
-  return canonical;
+  return redirectTo;
 }

@@ -60,6 +60,7 @@ export default function SignInScreen() {
                 // eslint-disable-next-line no-console
                 console.log('[auth] signInWithOtp emailRedirectTo →', redirectTo);
               }
+              trackEvent('sign_in_magic_link_redirect_to', { redirect_prefix: redirectTo.split(':')[0] ?? '' });
               const { error } = await supabase.auth.signInWithOtp({
                 email: email.trim(),
                 options: {
