@@ -18,7 +18,8 @@
       "bundleIdentifier": "com.baheemferrell.voxa",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Voxa needs microphone access to send your voice to your realtime AI practice session. Audio is used for speaking feedback only during a session you start."
+        "NSMicrophoneUsageDescription": "Voxa needs microphone access to send your voice to your realtime AI practice session. Audio is used for speaking feedback only during a session you start.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -32,6 +33,8 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
@@ -57,6 +60,12 @@
         "projectId": "c17559e4-a62e-4518-a7e8-967645362ed5"
       }
     },
-    "owner": "bferrell514"
+    "owner": "bferrell514",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c17559e4-a62e-4518-a7e8-967645362ed5"
+    }
   }
 }
