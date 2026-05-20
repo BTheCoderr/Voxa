@@ -24,8 +24,10 @@ import {
   createConversation,
 } from '@/lib/db/conversations';
 import { env } from '@/lib/env';
+import { DEFAULT_LAUNCH_LANGUAGE, parseApiLearningPath } from '@/lib/learningPath/display';
+import { getPreferredLanguage } from '@/lib/preferences/storage';
 import { useProgress } from '@/lib/progress/useProgress';
-import { toApiLearningPath } from '@/lib/realtime/learningPath';
+import { toApiLearningPath, type ApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UseVoxaVoiceSessionParams } from '@/lib/realtime/useVoxaVoiceSession';
 import { useVoxaVoiceSession } from '@/lib/realtime/useVoxaVoiceSession';
 import type { TranscriptPersistPayload, VoiceSessionPhase } from '@/lib/realtime/voiceSessionTypes';
@@ -70,9 +72,15 @@ type ConversationSessionActiveProps = {
   scenario: Scenario;
   userId: string;
   accessToken: string;
+  learningPath: ApiLearningPath;
 };
 
-function ConversationSessionActive({ scenario, userId, accessToken }: ConversationSessionActiveProps) {
+function ConversationSessionActive({
+  scenario,
+  userId,
+  accessToken,
+  learningPath,
+}: ConversationSessionActiveProps) {
   const insets = useSafeAreaInsets();
   const { addXpFromSession } = useProgress();
 
@@ -152,13 +160,13 @@ function ConversationSessionActive({ scenario, userId, accessToken }: Conversati
     return {
       scenarioId: scenario.id,
       scenarioTitle: scenario.title,
-      learningPath: toApiLearningPath(scenario.languages[0] ?? 'english_business'),
+      learningPath,
       userLevel: 'intermediate',
       authToken: accessToken,
       onTranscriptPersist,
       onCorrectionPersist,
     };
-  }, [scenario, accessToken, onTranscriptPersist, onCorrectionPersist]);
+  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist]);
 
   const { phase, errorMessage, messages, corrections, sessionSummary, muted, startSession, endSession, toggleMute } =
     useVoxaVoiceSession(voiceParams);
@@ -174,7 +182,7 @@ function ConversationSessionActive({ scenario, userId, accessToken }: Conversati
           userId,
           scenarioId: scenario.id,
           scenarioTitle: scenario.title,
-          learningPath: toApiLearningPath(scenario.languages[0] ?? 'english_business'),
+          learningPath,
           userLevel: 'intermediate',
         });
         conversationIdRef.current = row.id;
@@ -263,7 +271,7 @@ function ConversationSessionActive({ scenario, userId, accessToken }: Conversati
 
         <View style={styles.header}>
           <VoxaText variant="caption" style={styles.overline}>
-            TestFlight beta · Live practice
+            Voice · Premium / experimental
           </VoxaText>
           <VoxaText variant="title">{scenario.title}</VoxaText>
           <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
@@ -354,9 +362,22 @@ function ConversationSessionActive({ scenario, userId, accessToken }: Conversati
 }
 
 export default function ConversationScreen() {
-  const params = useLocalSearchParams<{ scenarioId: string }>();
+  const params = useLocalSearchParams<{ scenarioId: string; path?: string }>();
   const scenario = useMemo(() => getScenario(params.scenarioId as ScenarioId), [params.scenarioId]);
   const { session, user } = useAuth();
+  const [learningPath, setLearningPath] = useState<ApiLearningPath | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      const fromRoute = parseApiLearningPath(params.path);
+      if (fromRoute) {
+        setLearningPath(fromRoute);
+        return;
+      }
+      const lang = await getPreferredLanguage();
+      setLearningPath(toApiLearningPath(lang ?? DEFAULT_LAUNCH_LANGUAGE));
+    })();
+  }, [params.path]);
 
   if (!scenario) {
     return (
@@ -388,7 +409,24 @@ export default function ConversationScreen() {
     );
   }
 
-  return <ConversationSessionActive scenario={scenario} userId={user.id} accessToken={session.access_token} />;
+  if (!learningPath) {
+    return (
+      <GradientBackground>
+        <View style={[styles.center, { padding: spacing.xl }]}>
+          <ActivityIndicator color={palette.cyan} />
+        </View>
+      </GradientBackground>
+    );
+  }
+
+  return (
+    <ConversationSessionActive
+      scenario={scenario}
+      userId={user.id}
+      accessToken={session.access_token}
+      learningPath={learningPath}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

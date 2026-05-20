@@ -21,9 +21,9 @@ export type Scenario = {
 };
 
 export const LAUNCH_LANGUAGES: { id: LaunchLanguage; label: string; hint: string }[] = [
-  { id: 'english_business', label: 'Business English', hint: 'Meetings, interviews, email tone' },
-  { id: 'spanish', label: 'Conversational Spanish', hint: 'Natural pace, everyday confidence' },
-  { id: 'mandarin', label: 'Conversational Mandarin', hint: 'Pinyin-friendly speaking practice' },
+  { id: 'english_business', label: 'Business English', hint: 'Meetings, interviews, professional tone' },
+  { id: 'spanish', label: 'Spanish', hint: 'Natural conversational Spanish' },
+  { id: 'mandarin', label: 'Mandarin', hint: 'Mandarin with pinyin when helpful' },
 ];
 
 export const SCENARIOS: Scenario[] = [

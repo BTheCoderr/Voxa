@@ -1,51 +1,47 @@
-# Voxa — Supabase auth redirects (magic link)
+# Voxa — Supabase authentication
 
-## First checks if links still open Netlify
+## Primary: email + password (beta testing)
 
-1. **Request a brand-new magic link** after deploying this app version. Old emails bake in the old `redirect_to` forever.
-2. **Supabase → Authentication → Email templates → Magic link**  
-   The button/link **must** use **`{{ .ConfirmationURL }}`** (or the documented confirmation link variable).  
-   If the template uses **`{{ .SiteURL }}`**, **`https://…netlify…`**, or a hardcoded marketing URL, the app will **never** receive `voxa://` — Supabase is not choosing Netlify; **the template is.**
-3. **Redeploy Netlify** so `https://voxxa.netlify.app/auth/callback` exists (bridge page). Until then you get **404** from the marketing site.
+**Default sign-in path** in the app (`app/(auth)/sign-in.tsx`):
+
+- **Sign in:** `supabase.auth.signInWithPassword({ email, password })`
+- **Create account:** `supabase.auth.signUp({ email, password })`
+
+No deep links or redirect URLs are required for this flow. After success, the app calls **`router.replace('/')`** and **`AuthProvider`** picks up the session via `onAuthStateChange`.
+
+### Supabase dashboard (password auth)
+
+1. **Authentication → Providers → Email** — enable Email provider.
+2. For frictionless beta testing, consider **disabling “Confirm email”** so `signUp` returns a session immediately. If confirmation stays on, users must confirm via email before password sign-in works.
+3. **Authentication → Policies** — ensure sign-ups are allowed if you use Create account.
+
+### Client-side validation
+
+- Invalid email format
+- Password length on sign-up (6+ characters; matches typical Supabase minimum)
+- Mapped API errors: wrong password, user already exists, weak password, etc. (`lib/auth/authErrors.ts`)
 
 ---
 
-Magic links use **`emailRedirectTo`** → in-app **`auth/callback`**, which parses tokens and calls `supabase.auth.setSession` (or `exchangeCodeForSession` if you ever switch flows).
+## Optional: magic link (future / secondary)
 
-**Implementation:** `getAuthMagicLinkRedirectUrl()` uses **`Linking.createURL('auth/callback')`** then normalizes `voxa:/…` → **`voxa://…`**. Screen: `app/auth/callback.tsx`.
+Magic link remains available as **“Email me a magic link instead”** on the sign-in screen. It uses **`emailRedirectTo`** → in-app **`auth/callback`** (`app/auth/callback.tsx`).
 
-## Why the browser opened Netlify (`https://…/auth/callback`) instead of the app
+Use magic link when you want passwordless login in production. For **TestFlight / dev testing**, prefer **email + password** to avoid redirect/deep-link issues.
 
-1. **`redirect_to` not allowed or wrong string** — If the value sent to GoTrue does not exactly match an entry in **Redirect URLs**, the server may fall back to **Site URL** (your Netlify homepage host).
-2. **`voxa:/auth/callback` vs `voxa://auth/callback`** — Expo’s `createURL` can emit a single slash; we normalize for custom schemes.
-3. **Site URL** = `https://voxxa.netlify.app/` — This is only the **default** when GoTrue discards or replaces the requested redirect — it does not “override” a valid `voxa://` template link if the **email** still contains the correct confirmation URL.
+### Magic link redirect URLs
 
-**Fix:** Allow-list **`voxa://auth/callback`**, fix **email template**, **normalize** redirect (done in code), request a **new** email.
-
----
-
-## Supabase Dashboard → Authentication → URL configuration
-
-### Redirect URLs (allow list) — include at minimum
+If you use magic link, configure **Authentication → Redirect URLs**:
 
 | URL | Purpose |
 |-----|---------|
-| **`voxa://auth/callback`** | **Required** — iOS/Android dev client, TestFlight, production |
-| `https://voxxa.netlify.app/auth/callback` | **Optional** — HTTPS bridge (forwards to `voxa://`; redeploy marketing so it is not 404) |
-| `exp://…` / dev URLs | Optional — log **`[auth] emailRedirectTo`** from Metro when using Expo dev client |
+| **`voxa://auth/callback`** | Dev client, TestFlight, production |
+| `https://voxxa.netlify.app/auth/callback` | Optional HTTPS bridge (marketing site forwards to `voxa://`) |
+| `exp://<LAN-IP>:8081/--/auth/callback` | Expo Go only (IP changes; log `[auth] emailRedirectTo` in Metro) |
 
-### Site URL
+**Email templates** must use **`{{ .ConfirmationURL }}`**, not hardcoded Site URL.
 
-Keeping **`https://voxxa.netlify.app/`** is fine for a marketing **default**. Mobile magic links still need **`voxa://auth/callback`** in **Redirect URLs** + correct **email template**.
-
----
-
-## Implementation details
-
-- **Client:** `lib/auth/magicLinkRedirect.ts` — `Linking.createURL` + normalization.
-- **Auth client:** `flowType: 'implicit'` in `lib/supabase/client.ts` (explicit; hash tokens on deep link).
-- **Sign-in:** logs `emailRedirectTo` in dev; `trackEvent('sign_in_magic_link_redirect_to', { redirect_prefix })` for analytics.
-- **Marketing fallback:** `marketing/app/auth/callback/page.tsx` — **redeploy Netlify** to clear 404.
+See implementation: `lib/auth/magicLinkRedirect.ts`, `lib/auth/completeSessionFromUrl.ts`.
 
 ---
 
@@ -55,5 +51,8 @@ Keeping **`https://voxxa.netlify.app/`** is fine for a marketing **default**. Mo
 
 ## Troubleshooting
 
-- **404 on Netlify:** Deploy latest `marketing` build with `/auth/callback`.
-- **Still HTTPS after new email:** Inspect template → must be `{{ .ConfirmationURL }}`.
+| Issue | Fix |
+|-------|-----|
+| “Invalid login credentials” | Wrong password or no account — use Create account or reset password in Supabase dashboard. |
+| Sign up succeeds but can’t sign in | Email confirmation may be required — disable in Supabase for beta or confirm email. |
+| Magic link opens Netlify | Fix email template + allow-list `voxa://auth/callback`; request a **new** link. |

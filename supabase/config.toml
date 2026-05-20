@@ -5,3 +5,9 @@ project_id = "voxa"
 
 [functions.realtime-session]
 verify_jwt = true
+
+[functions.ai-chat-coach]
+verify_jwt = true
+
+[functions.elevenlabs-tts]
+verify_jwt = true

@@ -9,10 +9,18 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { spacing } from '@/constants/theme';
+import { fetchCoachHealth } from '@/lib/ai/coachHealth';
+import { isVoicePracticeMode } from '@/lib/ai/mode';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getLastRealtimeError } from '@/lib/diagnostics/realtimeErrors';
 import { env } from '@/lib/env';
 import { getAudioStreamModule } from '@/lib/realtime/audioStreamModule';
+import {
+  fetchTtsTestAudio,
+  fetchTtsHealth,
+  getTtsUserErrorMessage,
+  playBase64Audio,
+} from '@/lib/tts/elevenLabsTts';
 
 function boolLabel(v: boolean): string {
   return v ? 'Yes' : 'No';
@@ -20,12 +28,50 @@ function boolLabel(v: boolean): string {
 
 export default function DebugHealthScreen() {
   const insets = useSafeAreaInsets();
-  const { user, initialized } = useAuth();
+  const { user, initialized, session } = useAuth();
   const [micStatus, setMicStatus] = useState<string>('…');
   const [lastErr, setLastErr] = useState<ReturnType<typeof getLastRealtimeError>>(null);
+  const [coachHealth, setCoachHealth] = useState<string>('…');
+  const [ttsHealth, setTtsHealth] = useState<string>('…');
+  const [ttsTestStatus, setTtsTestStatus] = useState<string | null>(null);
+  const [ttsTesting, setTtsTesting] = useState(false);
 
   const refresh = useCallback(async () => {
     setLastErr(getLastRealtimeError());
+
+    if (env.aiChatCoachConfigured) {
+      const health = await fetchCoachHealth(session?.access_token);
+      if (!health) {
+        setCoachHealth('Server-side · could not reach health endpoint');
+      } else {
+        const parts = [
+          'Server-side',
+          `primary: ${health.primaryProvider}`,
+          `fallback: ${health.fallbackAvailable ? health.fallbackProvider : 'none'}`,
+          `groq: ${health.providers.groq}`,
+          `gemini: ${health.providers.gemini}`,
+        ];
+        setCoachHealth(parts.join(' · '));
+      }
+    } else {
+      setCoachHealth('Not configured');
+    }
+
+    if (env.elevenLabsTtsConfigured) {
+      const health = await fetchTtsHealth(session?.access_token);
+      if (!health) {
+        setTtsHealth('Could not reach TTS health endpoint');
+      } else {
+        const parts = [
+          `hasKey: ${health.hasKey}`,
+          health.keyPrefix ? `prefix: ${health.keyPrefix}` : null,
+          health.defaultModel ? `model: ${health.defaultModel}` : null,
+        ].filter(Boolean);
+        setTtsHealth(parts.join(' · '));
+      }
+    } else {
+      setTtsHealth('URL not configured');
+    }
     if (Platform.OS === 'web') {
       setMicStatus('Web (voice not supported)');
       return;
@@ -43,7 +89,26 @@ export default function DebugHealthScreen() {
     } catch {
       setMicStatus('Unknown (permission check failed)');
     }
-  }, []);
+  }, [session?.access_token]);
+
+  const runVoiceTest = useCallback(async () => {
+    if (ttsTesting) return;
+    setTtsTestStatus(null);
+    setTtsTesting(true);
+    try {
+      if (!env.elevenLabsTtsConfigured) {
+        setTtsTestStatus('Voice playback is not set up yet.');
+        return;
+      }
+      const audio = await fetchTtsTestAudio(session?.access_token);
+      await playBase64Audio(audio.audioBase64, audio.contentType);
+      setTtsTestStatus('Voice test played successfully.');
+    } catch (e) {
+      setTtsTestStatus(getTtsUserErrorMessage(e));
+    } finally {
+      setTtsTesting(false);
+    }
+  }, [session?.access_token, ttsTesting]);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,8 +143,33 @@ export default function DebugHealthScreen() {
         <GlassPanel style={styles.card}>
           <Row label="Supabase configured" value={boolLabel(env.supabaseConfigured)} />
           <Row label="Signed in" value={initialized ? boolLabel(Boolean(user)) : '…'} />
+          <Row label="AI mode" value={isVoicePracticeMode() ? 'voice (premium)' : 'text (default)'} />
+          <Row label="AI chat coach URL" value={boolLabel(env.aiChatCoachConfigured)} />
+          <Row label="ElevenLabs TTS URL" value={boolLabel(env.elevenLabsTtsConfigured)} />
+          <Row label="TTS health" value={ttsHealth} />
+          <Row label="AI provider keys" value="Server-side only" />
+          <Row label="Coach health" value={coachHealth} />
           <Row label="Realtime session URL" value={boolLabel(env.realtimeSessionConfigured)} />
           <Row label="PostHog key" value={boolLabel(Boolean(env.posthogKey))} />
+        </GlassPanel>
+
+        <GlassPanel style={styles.card}>
+          <VoxaText variant="caption" style={styles.monoLabel}>
+            Voice playback test
+          </VoxaText>
+          <VoxaText variant="muted">
+            Calls elevenlabs-tts with a short test sentence. Does not affect text practice.
+          </VoxaText>
+          <VoxaButton
+            title={ttsTesting ? 'Testing voice…' : 'Test Voxa voice'}
+            onPress={() => void runVoiceTest()}
+            disabled={ttsTesting}
+          />
+          {ttsTestStatus ? (
+            <VoxaText variant="body" style={styles.err}>
+              {ttsTestStatus}
+            </VoxaText>
+          ) : null}
         </GlassPanel>
 
         <GlassPanel style={[styles.card, styles.mono]}>

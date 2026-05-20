@@ -9,9 +9,11 @@ import { VoxaText } from '@/components/ui/VoxaText';
 type Props = {
   scenario: Scenario;
   onPress: () => void;
+  actionLabel?: string;
+  badge?: string;
 };
 
-export function ScenarioCard({ scenario, onPress }: Props) {
+export function ScenarioCard({ scenario, onPress, actionLabel, badge }: Props) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
       <GlassPanel style={styles.card}>
@@ -19,13 +21,27 @@ export function ScenarioCard({ scenario, onPress }: Props) {
           <VoxaText variant="title" style={styles.title}>
             {scenario.title}
           </VoxaText>
-          <View style={styles.pill}>
-            <VoxaText variant="caption" style={styles.pillText}>
-              {scenario.durationMin} min
-            </VoxaText>
+          <View style={styles.pillRow}>
+            {badge ? (
+              <View style={[styles.pill, styles.badgePill]}>
+                <VoxaText variant="caption" style={styles.badgeText}>
+                  {badge}
+                </VoxaText>
+              </View>
+            ) : null}
+            <View style={styles.pill}>
+              <VoxaText variant="caption" style={styles.pillText}>
+                {scenario.durationMin} min
+              </VoxaText>
+            </View>
           </View>
         </View>
         <VoxaText variant="body">{scenario.subtitle}</VoxaText>
+        {actionLabel ? (
+          <VoxaText variant="caption" style={styles.action}>
+            {actionLabel} →
+          </VoxaText>
+        ) : null}
       </GlassPanel>
     </Pressable>
   );
@@ -60,6 +76,23 @@ const styles = StyleSheet.create({
     backgroundColor: palette.frost,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: palette.frostStrong,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    alignItems: 'center',
+  },
+  badgePill: {
+    borderColor: palette.cyan,
+  },
+  badgeText: {
+    color: palette.cyan,
+    fontWeight: '700',
+  },
+  action: {
+    marginTop: spacing.sm,
+    color: palette.cyan,
+    fontWeight: '600',
   },
   pillText: {
     color: palette.textSecondary,
