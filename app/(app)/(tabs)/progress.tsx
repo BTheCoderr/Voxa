@@ -8,10 +8,12 @@ import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { useProgress } from '@/lib/progress/useProgress';
 
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { progress, progressHydrated } = useProgress();
 
   if (!progressHydrated) {
@@ -29,6 +31,9 @@ export default function ProgressScreen() {
         </VoxaText>
         <VoxaText variant="title">Confidence, measured gently</VoxaText>
         <VoxaText variant="body">Your streak counts speaking days — not perfection. XP rewards showing up and finishing a session.</VoxaText>
+        {!user ? (
+          <VoxaText variant="muted">Sign in to sync XP and streaks across devices. Until then, progress stays on this device.</VoxaText>
+        ) : null}
         <BetaDisclaimer compact />
 
         <View style={styles.row}>

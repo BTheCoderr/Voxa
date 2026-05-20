@@ -134,7 +134,8 @@ function providerConfigured(name: ProviderName): boolean {
 function isRetriableProviderError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
   if (/timeout|timed out|abort/i.test(msg)) return true;
-  if (/\berror (401|403|429|502|503|504)\b/i.test(msg)) return true;
+  if (/\berror (401|403|429|500|502|503|504)\b/i.test(msg)) return true;
+  if (/fetch failed|network|econnreset|enotfound|socket hang up/i.test(msg)) return true;
   if (/invalid api key|invalid_api_key|unauthorized|authentication/i.test(msg)) return true;
   if (/rate.?limit|overloaded|unavailable|resource.?exhausted/i.test(msg)) return true;
   return false;
@@ -279,7 +280,10 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     console.error("Coach provider error:", e);
-    const msg = e instanceof Error ? e.message : "AI provider failed";
-    return errorResponse(msg, 502, "provider_error");
+    return errorResponse(
+      "The AI coach is temporarily unavailable. Try again in a moment.",
+      502,
+      "provider_error",
+    );
   }
 });

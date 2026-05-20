@@ -62,6 +62,8 @@ export type Database = {
           started_at: string;
           ended_at: string | null;
           xp_awarded: number;
+          ai_provider_used: string | null;
+          ai_used_fallback: boolean | null;
         };
         Insert: {
           id?: string;
@@ -75,6 +77,8 @@ export type Database = {
           started_at?: string;
           ended_at?: string | null;
           xp_awarded?: number;
+          ai_provider_used?: string | null;
+          ai_used_fallback?: boolean | null;
         };
         Update: {
           id?: string;
@@ -88,6 +92,8 @@ export type Database = {
           started_at?: string;
           ended_at?: string | null;
           xp_awarded?: number;
+          ai_provider_used?: string | null;
+          ai_used_fallback?: boolean | null;
         };
         Relationships: [];
       };
@@ -133,6 +139,9 @@ export type Database = {
           conversation_id: string;
           user_id: string;
           body: string;
+          original: string;
+          improved: string;
+          explanation: string;
           created_at: string;
         };
         Insert: {
@@ -140,6 +149,9 @@ export type Database = {
           conversation_id: string;
           user_id: string;
           body: string;
+          original?: string;
+          improved?: string;
+          explanation?: string;
           created_at?: string;
         };
         Update: {
@@ -147,6 +159,9 @@ export type Database = {
           conversation_id?: string;
           user_id?: string;
           body?: string;
+          original?: string;
+          improved?: string;
+          explanation?: string;
           created_at?: string;
         };
         Relationships: [];

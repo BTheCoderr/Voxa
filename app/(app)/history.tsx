@@ -101,7 +101,7 @@ export default function HistoryScreen() {
             <PolishedEmptyState
               title="Sign in to sync your journal"
               body="Progress can stay on this device, or create an account to keep session history consistent across installs."
-              footnote="Beta: magic-link sign-in on the Profile tab."
+              footnote="Beta: sign in with email and password on the Profile tab."
               compact
             />
           ) : (

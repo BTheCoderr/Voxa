@@ -71,16 +71,31 @@ export async function addCorrection(
   args: {
     conversationId: string;
     userId: string;
-    body: string;
+    body?: string;
+    original?: string;
+    improved?: string;
+    explanation?: string;
   },
 ): Promise<void> {
+  const original = args.original ?? '';
+  const improved = args.improved ?? '';
+  const explanation = args.explanation ?? '';
+  const fallbackBody = [original, improved, explanation]
+    .filter(Boolean)
+    .join(' · ');
+
+  const body = args.body?.trim() || fallbackBody || original || improved || 'Correction';
+
   const { error } = await client.from('corrections').upsert(
     {
       conversation_id: args.conversationId,
       user_id: args.userId,
-      body: args.body,
+      body,
+      original,
+      improved,
+      explanation,
     },
-    { onConflict: 'conversation_id,body', ignoreDuplicates: true },
+    { onConflict: 'conversation_id,original,improved', ignoreDuplicates: true },
   );
 
   if (error) throw error;
@@ -94,6 +109,8 @@ export async function completeConversation(
     summary: string;
     xpAwarded: number;
     status?: 'completed' | 'aborted';
+    aiProviderUsed?: string | null;
+    aiUsedFallback?: boolean | null;
   },
 ): Promise<void> {
   const { error } = await client
@@ -103,6 +120,8 @@ export async function completeConversation(
       summary: args.summary,
       ended_at: new Date().toISOString(),
       xp_awarded: args.xpAwarded,
+      ...(args.aiProviderUsed !== undefined ? { ai_provider_used: args.aiProviderUsed } : {}),
+      ...(args.aiUsedFallback !== undefined ? { ai_used_fallback: args.aiUsedFallback } : {}),
     })
     .eq('id', args.conversationId)
     .eq('user_id', args.userId);

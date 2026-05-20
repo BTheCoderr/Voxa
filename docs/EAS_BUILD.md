@@ -118,13 +118,24 @@ Set secrets for **build-time** `EXPO_PUBLIC_*` values (they are inlined in the J
 ```bash
 eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value "https://xxx.supabase.co"
 eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "your-anon-key"
+eas secret:create --scope project --name EXPO_PUBLIC_AI_MODE --value "text"
+eas secret:create --scope project --name EXPO_PUBLIC_AI_CHAT_COACH_URL --value "https://xxx.supabase.co/functions/v1/ai-chat-coach"
+eas secret:create --scope project --name EXPO_PUBLIC_ELEVENLABS_TTS_URL --value "https://xxx.supabase.co/functions/v1/elevenlabs-tts"
+# optional voice mode (not default):
 eas secret:create --scope project --name EXPO_PUBLIC_REALTIME_SESSION_URL --value "https://xxx.supabase.co/functions/v1/realtime-session"
-# optional:
+# optional analytics:
 eas secret:create --scope project --name EXPO_PUBLIC_POSTHOG_KEY --value "phc_..."
 eas secret:create --scope project --name EXPO_PUBLIC_POSTHOG_HOST --value "https://us.i.posthog.com"
 ```
 
-Reference them in **eas.json** if you use `env` blocks per profile, or rely on EAS environment **.env** plugin — for simplicity, many teams use **EAS Secrets** + `app.config` reading `process.env`. With plain **app.json**, ensure your CI/EAS project defines env vars in the build dashboard or via `eas.json`:
+**Never** put these in EAS public env or Expo `.env`:
+
+- `GROQ_API_KEY`, `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `OPENAI_API_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, or any DB password
+
+Those live only in **Supabase Edge Function secrets** (`supabase secrets set …`). See `docs/SECURITY.md`.
+
+Reference secrets in **eas.json** if you use `env` blocks per profile, or set them in the EAS project dashboard:
 
 ```json
 "production": {
@@ -136,13 +147,22 @@ Reference them in **eas.json** if you use `env` blocks per profile, or rely on E
 
 (Use EAS “file” or dashboard secret names as per current Expo docs.)
 
-**Checklist — must be present for a working voice + auth build:**
+**Checklist — must be present for a working text-practice + auth build:**
 
 | Variable | Purpose |
 |----------|---------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Auth + optional DB |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Auth + optional DB |
-| `EXPO_PUBLIC_REALTIME_SESSION_URL` | Mint realtime client secret |
+| `EXPO_PUBLIC_SUPABASE_URL` | Auth + DB sync |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Auth + DB sync |
+| `EXPO_PUBLIC_AI_MODE` | `text` (default) or `voice` (premium) |
+| `EXPO_PUBLIC_AI_CHAT_COACH_URL` | Groq/Gemini text coach Edge Function |
+| `EXPO_PUBLIC_ELEVENLABS_TTS_URL` | Optional “Hear this response” playback |
+
+Optional:
+
+| Variable | Purpose |
+|----------|---------|
+| `EXPO_PUBLIC_REALTIME_SESSION_URL` | OpenAI Realtime (voice mode only) |
+| `EXPO_PUBLIC_POSTHOG_KEY` | Analytics |
 
 ---
 

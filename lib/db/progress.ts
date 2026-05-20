@@ -49,12 +49,24 @@ export async function recordStreakEvent(
 
   if (readErr) throw readErr;
 
-  let nextStreak = prog.current_streak;
   const last = prog.last_activity_date;
 
   if (last === today) {
-    nextStreak = prog.current_streak;
-  } else if (!last) {
+    const { error: upsertErr } = await client.from('streak_events').upsert(
+      {
+        user_id: userId,
+        event_date: today,
+        conversation_id: opts?.conversationId ?? null,
+      },
+      { onConflict: 'user_id,event_date', ignoreDuplicates: true },
+    );
+    if (upsertErr) throw upsertErr;
+    return;
+  }
+
+  let nextStreak = prog.current_streak;
+
+  if (!last) {
     nextStreak = 1;
   } else if (isYesterdayKey(last, today)) {
     nextStreak = prog.current_streak + 1;
@@ -62,11 +74,14 @@ export async function recordStreakEvent(
     nextStreak = 1;
   }
 
-  const { error: insErr } = await client.from('streak_events').insert({
-    user_id: userId,
-    event_date: today,
-    conversation_id: opts?.conversationId ?? null,
-  });
+  const { error: insErr } = await client.from('streak_events').upsert(
+    {
+      user_id: userId,
+      event_date: today,
+      conversation_id: opts?.conversationId ?? null,
+    },
+    { onConflict: 'user_id,event_date', ignoreDuplicates: true },
+  );
   if (insErr) throw insErr;
 
   const { error: updErr } = await client

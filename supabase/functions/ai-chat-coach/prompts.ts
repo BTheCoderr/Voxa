@@ -21,21 +21,21 @@ function languageBrief(path: LearningPath): string {
         "CRITICAL — `learningPath` is business_english.",
         "Write `reply` and all in-character dialogue in **English only**.",
         "Never reply in Chinese, Spanish, or other languages unless quoting the learner verbatim.",
-        "Corrections should target English phrasing; `explanation` may be in English.",
+        "Keep `original` and `improved` in English. Write `explanation` in English.",
       ].join(" ");
     case "spanish":
       return [
         "CRITICAL — `learningPath` is spanish.",
         "Write `reply` and all in-character dialogue in **Spanish only**.",
         "Do not reply in English or Chinese unless quoting the learner verbatim.",
-        "Use English in `explanation` fields when it helps clarity.",
+        "Keep `original` and `improved` in Spanish. Use English only in `explanation` when it helps clarity.",
       ].join(" ");
     case "mandarin":
       return [
         "CRITICAL — `learningPath` is mandarin.",
         "Write `reply` and all in-character dialogue in **Mandarin Chinese (简体) only**.",
-        "Add pinyin for non-trivial phrases when helpful.",
-        "Use simple English in `explanation` fields when useful.",
+        "Include tone-marked pinyin for non-trivial phrases in `reply` when helpful.",
+        "Keep `original` and `improved` in 简体. Use simple English only in `explanation`.",
       ].join(" ");
   }
 }

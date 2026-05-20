@@ -45,11 +45,22 @@ export async function fetchChatCoachReply(
 
   if (!res.ok) {
     const err = json as ErrorBody | undefined;
-    const msg =
-      (err && typeof err.error === 'string' && err.error) ||
-      (raw ? raw.slice(0, 280) : '') ||
-      `AI coach request failed (${res.status})`;
-    throw new Error(msg);
+    const code = typeof err?.code === 'string' ? err.code : undefined;
+
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('Please sign in again.');
+    }
+    if (code === 'invalid_payload' || code === 'invalid_body') {
+      throw new Error('Could not send your message. Try again.');
+    }
+    if (code === 'provider_error' || res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new Error('The AI coach is temporarily unavailable. Try again in a moment.');
+    }
+    if (res.status === 429) {
+      throw new Error('The AI coach is busy. Wait a few seconds and try again.');
+    }
+
+    throw new Error('Could not reach the AI coach. Check your connection and try again.');
   }
 
   if (!json) {
@@ -84,6 +95,12 @@ export async function fetchChatCoachReply(
       json._meta &&
       typeof (json._meta as Record<string, unknown>).providerUsed === 'string'
         ? ((json._meta as Record<string, unknown>).providerUsed as string)
+        : undefined,
+    usedFallback:
+      typeof json._meta === 'object' &&
+      json._meta &&
+      typeof (json._meta as Record<string, unknown>).usedFallback === 'boolean'
+        ? ((json._meta as Record<string, unknown>).usedFallback as boolean)
         : undefined,
   };
 }

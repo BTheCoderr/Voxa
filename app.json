@@ -24,6 +24,7 @@
     "android": {
       "package": "com.baheemferrell.voxa",
       "versionCode": 1,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#070A12"

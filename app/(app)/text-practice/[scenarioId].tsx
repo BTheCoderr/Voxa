@@ -111,6 +111,8 @@ function TextSessionActive({
 
   const conversationIdRef = useRef<string | null>(null);
   const correctionCountRef = useRef(0);
+  const sessionEndedRef = useRef(false);
+  const lastAiMetaRef = useRef<{ providerUsed?: string; usedFallback?: boolean }>({});
 
   const coachMessages = useMemo(
     () => messages.map((m) => ({ role: m.role, content: m.text })),
@@ -164,7 +166,14 @@ function TextSessionActive({
       if (!cid || !env.supabaseConfigured) return;
       const body = [c.original, c.improved, c.explanation].filter(Boolean).join(' · ');
       try {
-        await addCorrection(supabase, { conversationId: cid, userId, body });
+        await addCorrection(supabase, {
+          conversationId: cid,
+          userId,
+          body,
+          original: c.original,
+          improved: c.improved,
+          explanation: c.explanation,
+        });
       } catch (e) {
         console.warn('addCorrection', e);
       }
@@ -183,6 +192,8 @@ function TextSessionActive({
     setTtsError(null);
     correctionCountRef.current = 0;
     conversationIdRef.current = null;
+    sessionEndedRef.current = false;
+    lastAiMetaRef.current = {};
 
     if (!env.aiChatCoachConfigured) {
       setErrorMessage(
@@ -234,6 +245,10 @@ function TextSessionActive({
       setLatestEncouragement(result.encouragement);
       setLatestAssistantText(result.reply);
       correctionCountRef.current += result.corrections.length;
+      lastAiMetaRef.current = {
+        providerUsed: result.providerUsed,
+        usedFallback: result.usedFallback,
+      };
 
       void persistMessage('assistant', result.reply, assistantId);
       for (const c of result.corrections) {
@@ -292,7 +307,26 @@ function TextSessionActive({
     scrollTranscriptToEnd();
   }, [messages, latestCorrections, latestAssistantText, busy, scrollTranscriptToEnd]);
 
+  const abandonEmptySession = useCallback(async () => {
+    const cid = conversationIdRef.current;
+    if (!cid || !env.supabaseConfigured) return;
+    try {
+      await completeConversation(supabase, {
+        conversationId: cid,
+        userId,
+        summary: 'Session ended before any messages.',
+        xpAwarded: 0,
+        status: 'aborted',
+      });
+    } catch (e) {
+      console.warn('completeConversation (aborted)', e);
+    }
+  }, [userId]);
+
   const endSession = useCallback(async () => {
+    if (sessionEndedRef.current) return;
+    sessionEndedRef.current = true;
+
     const hadMessages = messages.length > 0;
     const durationSeconds = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : 0;
     const xpEarned = hadMessages ? XP_FOR_SESSION : 0;
@@ -313,6 +347,8 @@ function TextSessionActive({
           summary,
           xpAwarded: xpEarned,
           status: 'completed',
+          aiProviderUsed: lastAiMetaRef.current.providerUsed ?? null,
+          aiUsedFallback: lastAiMetaRef.current.usedFallback ?? null,
         });
       } catch (e) {
         console.warn('completeConversation', e);
@@ -338,8 +374,8 @@ function TextSessionActive({
     <GradientBackground>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
-        keyboardVerticalOffset={insets.top}>
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
         <View
           style={[
             styles.container,
@@ -354,8 +390,10 @@ function TextSessionActive({
                     { text: 'End', style: 'destructive', onPress: () => void endSession() },
                   ]);
                 } else if (sessionActive) {
+                  void abandonEmptySession();
                   setSessionActive(false);
                   setStartedAt(null);
+                  conversationIdRef.current = null;
                 } else {
                   router.back();
                 }

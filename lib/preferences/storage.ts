@@ -6,9 +6,11 @@ const GOAL_KEY = '@voxa/preferences/v1/goal';
 
 export type LearningGoal = 'speaking_confidence' | 'work_english' | 'travel' | 'interviews';
 
+const VALID_LANGUAGES = new Set<LaunchLanguage>(['english_business', 'spanish', 'mandarin']);
+
 export async function getPreferredLanguage(): Promise<LaunchLanguage | null> {
   const v = await AsyncStorage.getItem(LANGUAGE_KEY);
-  if (!v) return null;
+  if (!v || !VALID_LANGUAGES.has(v as LaunchLanguage)) return null;
   return v as LaunchLanguage;
 }
 

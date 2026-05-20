@@ -31,6 +31,7 @@ export default function SignInScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [showAltSignIn, setShowAltSignIn] = useState(false);
 
   const isSignIn = mode === 'sign_in';
 
@@ -231,12 +232,23 @@ export default function SignInScreen() {
             onPress={() => void handlePasswordAuth()}
           />
 
-          <VoxaButton
-            variant="ghost"
-            title={busy ? 'Sending…' : 'Email me a magic link instead'}
-            disabled={busy || !email.trim() || !env.supabaseConfigured}
-            onPress={() => void handleMagicLink()}
-          />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setShowAltSignIn((v) => !v)}
+            style={styles.altToggle}>
+            <VoxaText variant="caption" style={styles.altToggleLabel}>
+              {showAltSignIn ? 'Hide other sign-in options' : 'Other sign-in options'}
+            </VoxaText>
+          </Pressable>
+
+          {showAltSignIn ? (
+            <VoxaButton
+              variant="ghost"
+              title={busy ? 'Sending…' : 'Email me a magic link (optional)'}
+              disabled={busy || !email.trim() || !env.supabaseConfigured}
+              onPress={() => void handleMagicLink()}
+            />
+          ) : null}
 
           <BetaDisclaimer compact />
 
@@ -302,5 +314,13 @@ const styles = StyleSheet.create({
   },
   back: {
     marginTop: spacing.md,
+  },
+  altToggle: {
+    alignSelf: 'center',
+    paddingVertical: spacing.xs,
+  },
+  altToggleLabel: {
+    color: palette.textMuted,
+    textDecorationLine: 'underline',
   },
 });

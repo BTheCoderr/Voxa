@@ -96,6 +96,10 @@ export default function DebugHealthScreen() {
     setTtsTestStatus(null);
     setTtsTesting(true);
     try {
+      if (!user || !session?.access_token) {
+        setTtsTestStatus('Sign in to test voice playback.');
+        return;
+      }
       if (!env.elevenLabsTtsConfigured) {
         setTtsTestStatus('Voice playback is not set up yet.');
         return;
@@ -108,7 +112,7 @@ export default function DebugHealthScreen() {
     } finally {
       setTtsTesting(false);
     }
-  }, [session?.access_token, ttsTesting]);
+  }, [session?.access_token, ttsTesting, user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -163,8 +167,11 @@ export default function DebugHealthScreen() {
           <VoxaButton
             title={ttsTesting ? 'Testing voice…' : 'Test Voxa voice'}
             onPress={() => void runVoiceTest()}
-            disabled={ttsTesting}
+            disabled={ttsTesting || !user}
           />
+          {!user ? (
+            <VoxaText variant="muted">Sign in to run the voice playback test.</VoxaText>
+          ) : null}
           {ttsTestStatus ? (
             <VoxaText variant="body" style={styles.err}>
               {ttsTestStatus}

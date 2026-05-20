@@ -149,9 +149,13 @@ function ConversationSessionActive({
       trackEvent('correction_received', { scenario_id: scenario.id, length: snippet.length });
       const cid = conversationIdRef.current;
       if (!cid || !env.supabaseConfigured) return;
-      void addCorrection(supabase, { conversationId: cid, userId, body: snippet }).catch((e) =>
-        console.warn('addCorrection', e),
-      );
+      void addCorrection(supabase, {
+        conversationId: cid,
+        userId,
+        body: snippet,
+        original: snippet,
+        improved: '',
+      }).catch((e) => console.warn('addCorrection', e));
     },
     [userId, scenario.id],
   );

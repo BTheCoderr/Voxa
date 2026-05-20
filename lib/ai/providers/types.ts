@@ -25,6 +25,8 @@ export type ChatCoachResponse = {
   encouragement: string;
   /** Present when Edge Function includes `_meta.providerUsed`. */
   providerUsed?: string;
+  /** Present when Edge Function includes `_meta.usedFallback`. */
+  usedFallback?: boolean;
 };
 
 export type AiProviderId = 'gemini' | 'groq';
