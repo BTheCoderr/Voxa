@@ -9,16 +9,37 @@ export type Database = {
           id: string;
           created_at: string;
           updated_at: string;
+          display_name: string | null;
+          native_language: string | null;
+          target_language: string | null;
+          interests: string[];
+          level: string | null;
+          explanation_language: string | null;
+          onboarding_completed: boolean;
         };
         Insert: {
           id: string;
           created_at?: string;
           updated_at?: string;
+          display_name?: string | null;
+          native_language?: string | null;
+          target_language?: string | null;
+          interests?: string[];
+          level?: string | null;
+          explanation_language?: string | null;
+          onboarding_completed?: boolean;
         };
         Update: {
           id?: string;
           created_at?: string;
           updated_at?: string;
+          display_name?: string | null;
+          native_language?: string | null;
+          target_language?: string | null;
+          interests?: string[];
+          level?: string | null;
+          explanation_language?: string | null;
+          onboarding_completed?: boolean;
         };
         Relationships: [];
       };

@@ -38,6 +38,25 @@ export default function AppLayout() {
           headerTintColor: '#F4F7FF',
         }}
       />
+      <Stack.Screen
+        name="lesson-map"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="lesson/[lessonId]"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="immersive-practice/[lessonId]"
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'fade',
+        }}
+      />
     </Stack>
   );
 }

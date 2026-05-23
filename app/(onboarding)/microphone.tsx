@@ -8,6 +8,7 @@ import { VoxaText } from '@/components/ui/VoxaText';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
+import { isGuidedLessonsEnabled } from '@/lib/lessons/guidedLessonsEnabled';
 import { setOnboardingComplete } from '@/lib/onboarding/storage';
 
 export default function MicrophoneScreen() {
@@ -34,11 +35,11 @@ export default function MicrophoneScreen() {
         <BetaDisclaimer compact />
 
         <VoxaButton
-          title="Enter Voxa"
+          title={isGuidedLessonsEnabled() ? 'Continue to setup' : 'Enter Voxa'}
           onPress={async () => {
             await setOnboardingComplete(true);
             trackEvent('onboarding_completed');
-            router.replace('/(app)/(tabs)');
+            router.replace(isGuidedLessonsEnabled() ? '/(onboarding)/guided' : '/(app)/(tabs)');
           }}
         />
       </View>

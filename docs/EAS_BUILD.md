@@ -121,6 +121,8 @@ eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "
 eas secret:create --scope project --name EXPO_PUBLIC_AI_MODE --value "text"
 eas secret:create --scope project --name EXPO_PUBLIC_AI_CHAT_COACH_URL --value "https://xxx.supabase.co/functions/v1/ai-chat-coach"
 eas secret:create --scope project --name EXPO_PUBLIC_ELEVENLABS_TTS_URL --value "https://xxx.supabase.co/functions/v1/elevenlabs-tts"
+# guided lesson map + onboarding (default enabled; set false to roll back without a new binary if bundled via OTA):
+eas env:create --name EXPO_PUBLIC_GUIDED_LESSONS_ENABLED --value "true" --environment production
 # optional voice mode (not default):
 eas secret:create --scope project --name EXPO_PUBLIC_REALTIME_SESSION_URL --value "https://xxx.supabase.co/functions/v1/realtime-session"
 # optional analytics:
@@ -161,6 +163,7 @@ Optional:
 
 | Variable | Purpose |
 |----------|---------|
+| `EXPO_PUBLIC_GUIDED_LESSONS_ENABLED` | `true` (default) shows guided onboarding + lesson map; `false` hides guided UI (Quick Practice only). Safe rollback via OTA. |
 | `EXPO_PUBLIC_REALTIME_SESSION_URL` | OpenAI Realtime (voice mode only) |
 | `EXPO_PUBLIC_POSTHOG_KEY` | Analytics |
 

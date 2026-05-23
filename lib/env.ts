@@ -29,4 +29,6 @@ export const env = {
   realtimeSessionConfigured: Boolean(REALTIME_SESSION_URL),
   /** `1` = richer empty states for marketing screenshots (no fake sessions). */
   screenshotMode: process.env.EXPO_PUBLIC_SCREENSHOT_MODE === '1',
+  /** Guided lesson map + conversational onboarding. Set EXPO_PUBLIC_GUIDED_LESSONS_ENABLED=false to disable. */
+  guidedLessonsEnabled: process.env.EXPO_PUBLIC_GUIDED_LESSONS_ENABLED !== 'false',
 };

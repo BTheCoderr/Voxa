@@ -41,6 +41,7 @@ import {
 } from '@/lib/learningPath/display';
 import { getPreferredLanguage } from '@/lib/preferences/storage';
 import { useProgress } from '@/lib/progress/useProgress';
+import { markLessonCompleted } from '@/lib/lessons/progress';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 import { supabase } from '@/lib/supabase/client';
@@ -66,6 +67,8 @@ type TextSessionActiveProps = {
   accessToken: string;
   learningPath: ReturnType<typeof toApiLearningPath>;
   pathOverline: string;
+  /** When set, finishing a session with messages auto-marks the guided lesson complete. */
+  lessonId?: string;
 };
 
 function TextSessionActive({
@@ -74,6 +77,7 @@ function TextSessionActive({
   accessToken,
   learningPath,
   pathOverline,
+  lessonId,
 }: TextSessionActiveProps) {
   const insets = useSafeAreaInsets();
   const { addXpFromSession } = useProgress();
@@ -359,6 +363,11 @@ function TextSessionActive({
       await addXpFromSession(xpEarned, { conversationId: cid ?? undefined, source: 'text_session' });
     }
 
+    if (hadMessages && lessonId) {
+      await markLessonCompleted(lessonId);
+      trackEvent('guided_lesson_completed', { lesson_id: lessonId, scenario_id: scenario.id });
+    }
+
     trackEvent('text_session_completed', {
       scenario_id: scenario.id,
       duration_seconds: durationSeconds,
@@ -366,7 +375,7 @@ function TextSessionActive({
       message_count: messages.length,
       xp_earned: xpEarned,
     });
-  }, [addXpFromSession, messages.length, scenario, startedAt, userId]);
+  }, [addXpFromSession, lessonId, messages.length, scenario, startedAt, userId]);
 
   const showRecap = sessionSummary !== null;
 
@@ -517,7 +526,7 @@ function TextSessionActive({
 }
 
 export default function TextPracticeScreen() {
-  const params = useLocalSearchParams<{ scenarioId: string; path?: string }>();
+  const params = useLocalSearchParams<{ scenarioId: string; path?: string; lessonId?: string }>();
   const scenario = useMemo(() => getScenario(params.scenarioId as ScenarioId), [params.scenarioId]);
   const { session, user } = useAuth();
   const [learningPath, setLearningPath] = useState<ReturnType<typeof toApiLearningPath> | null>(null);
@@ -571,6 +580,14 @@ export default function TextPracticeScreen() {
     );
   }
 
+  const lessonIdParam = params.lessonId;
+  const lessonId =
+    typeof lessonIdParam === 'string'
+      ? lessonIdParam
+      : Array.isArray(lessonIdParam) && lessonIdParam[0]
+        ? lessonIdParam[0]
+        : undefined;
+
   return (
     <TextSessionActive
       scenario={scenario}
@@ -578,6 +595,7 @@ export default function TextPracticeScreen() {
       accessToken={session.access_token}
       learningPath={learningPath}
       pathOverline={pathOverline}
+      lessonId={lessonId}
     />
   );
 }
