@@ -4,3 +4,8 @@ import { env } from '@/lib/env';
 export function isScreenshotMode(): boolean {
   return env.screenshotMode;
 }
+
+/** Internal screenshot gallery — dev builds or EXPO_PUBLIC_SCREENSHOT_MODE=1 only. */
+export function canAccessScreenshotPreview(): boolean {
+  return __DEV__ || isScreenshotMode();
+}

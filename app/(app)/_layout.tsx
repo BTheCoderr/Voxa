@@ -57,6 +57,13 @@ export default function AppLayout() {
           animation: 'fade',
         }}
       />
+      <Stack.Screen
+        name="screenshot-preview"
+        options={{
+          presentation: 'modal',
+          animation: 'fade',
+        }}
+      />
     </Stack>
   );
 }

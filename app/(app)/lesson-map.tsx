@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { LessonNodeCard } from '@/components/lessons/LessonNodeCard';
+import { TabletContent } from '@/components/layout/TabletContent';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
@@ -53,6 +54,7 @@ export default function LessonMapScreen() {
           { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxl },
         ]}
         showsVerticalScrollIndicator={false}>
+        <TabletContent fullWidth>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
             <VoxaText variant="caption" style={styles.back}>
@@ -94,6 +96,7 @@ export default function LessonMapScreen() {
             );
           })}
         </View>
+        </TabletContent>
       </ScrollView>
     </GradientBackground>
   );

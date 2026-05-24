@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LanguagePathPicker } from '@/components/practice/LanguagePathPicker';
+import { TabletContent } from '@/components/layout/TabletContent';
 import { PracticeModeFraming } from '@/components/practice/PracticeModeFraming';
 import { ScenarioCard } from '@/components/scenario/ScenarioCard';
 import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
@@ -84,6 +85,7 @@ export default function ScenariosHomeScreen() {
           { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxl },
         ]}
         showsVerticalScrollIndicator={false}>
+        <TabletContent fullWidth>
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <VoxaText variant="caption" style={styles.overline}>
@@ -203,6 +205,7 @@ export default function ScenariosHomeScreen() {
             </VoxaText>
           </Pressable>
         ) : null}
+        </TabletContent>
       </ScrollView>
     </GradientBackground>
   );

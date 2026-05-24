@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatBubble } from '@/components/onboarding/ChatBubble';
 import { OnboardingProgressBar } from '@/components/onboarding/OnboardingProgressBar';
 import { VoxaOrb } from '@/components/onboarding/VoxaOrb';
+import { TabletContent } from '@/components/layout/TabletContent';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -312,39 +313,41 @@ export default function GuidedOnboardingScreen() {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <OnboardingProgressBar step={stepIndex + 1} total={GUIDED_ONBOARDING_STEP_COUNT} />
+          <TabletContent fullWidth>
+            <OnboardingProgressBar step={stepIndex + 1} total={GUIDED_ONBOARDING_STEP_COUNT} />
 
-          <View style={styles.headerRow}>
-            <VoxaOrb size={48} />
-            <VoxaText variant="caption" style={styles.overline}>
-              Voxa coach · Step {stepIndex + 1} of {GUIDED_ONBOARDING_STEP_COUNT}
-            </VoxaText>
-          </View>
-
-          <ChatBubble role="assistant">{assistantPrompt}</ChatBubble>
-          {userReply && step !== 'completion' ? <ChatBubble role="user">{userReply}</ChatBubble> : null}
-
-          <View style={styles.choices}>{renderChoices()}</View>
-
-          <BetaDisclaimer compact />
-
-          <VoxaButton
-            title={step === 'completion' ? 'Open lesson map' : 'Continue'}
-            disabled={!canContinue || busy}
-            onPress={() => {
-              void persistPartial();
-              void goNext();
-            }}
-            containerStyle={styles.cta}
-          />
-
-          {stepIndex > 0 && step !== 'completion' ? (
-            <Pressable onPress={() => setStepIndex((i) => Math.max(0, i - 1))} style={styles.back}>
-              <VoxaText variant="caption" style={styles.backText}>
-                Back
+            <View style={styles.headerRow}>
+              <VoxaOrb size={48} />
+              <VoxaText variant="caption" style={styles.overline}>
+                Voxa coach · Step {stepIndex + 1} of {GUIDED_ONBOARDING_STEP_COUNT}
               </VoxaText>
-            </Pressable>
-          ) : null}
+            </View>
+
+            <ChatBubble role="assistant">{assistantPrompt}</ChatBubble>
+            {userReply && step !== 'completion' ? <ChatBubble role="user">{userReply}</ChatBubble> : null}
+
+            <View style={styles.choices}>{renderChoices()}</View>
+
+            <BetaDisclaimer compact />
+
+            <VoxaButton
+              title={step === 'completion' ? 'Open lesson map' : 'Continue'}
+              disabled={!canContinue || busy}
+              onPress={() => {
+                void persistPartial();
+                void goNext();
+              }}
+              containerStyle={styles.cta}
+            />
+
+            {stepIndex > 0 && step !== 'completion' ? (
+              <Pressable onPress={() => setStepIndex((i) => Math.max(0, i - 1))} style={styles.back}>
+                <VoxaText variant="caption" style={styles.backText}>
+                  Back
+                </VoxaText>
+              </Pressable>
+            ) : null}
+          </TabletContent>
         </ScrollView>
       </KeyboardAvoidingView>
     </GradientBackground>
@@ -388,6 +391,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
+    flexGrow: 1,
   },
   headerRow: {
     flexDirection: 'row',

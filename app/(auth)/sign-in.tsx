@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
+import { TabletContent } from '@/components/layout/TabletContent';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -157,7 +158,8 @@ export default function SignInScreen() {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         keyboardVerticalOffset={insets.top + 8}>
         <View style={[styles.wrap, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg }]}>
-          <VoxaText variant="title">{isSignIn ? 'Sign in' : 'Create account'}</VoxaText>
+          <TabletContent fullWidth style={styles.tablet}>
+            <VoxaText variant="title">{isSignIn ? 'Sign in' : 'Create account'}</VoxaText>
           <VoxaText variant="body">
             {isSignIn
               ? 'Use your email and password to continue. No redirect links required.'
@@ -253,6 +255,7 @@ export default function SignInScreen() {
           <BetaDisclaimer compact />
 
           <VoxaButton variant="ghost" title="Back" onPress={() => router.back()} containerStyle={styles.back} />
+          </TabletContent>
         </View>
       </KeyboardAvoidingView>
     </GradientBackground>
@@ -267,6 +270,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.xl,
     gap: spacing.md,
+  },
+  tablet: {
+    flex: 1,
+    alignSelf: 'stretch',
   },
   warn: {
     color: palette.cyan,

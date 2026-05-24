@@ -14,6 +14,7 @@ import { isVoicePracticeMode } from '@/lib/ai/mode';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getLastRealtimeError } from '@/lib/diagnostics/realtimeErrors';
 import { env } from '@/lib/env';
+import { canAccessScreenshotPreview } from '@/lib/presentation/screenshotMode';
 import { getAudioStreamModule } from '@/lib/realtime/audioStreamModule';
 import {
   fetchTtsTestAudio,
@@ -209,6 +210,13 @@ export default function DebugHealthScreen() {
         </GlassPanel>
 
         <VoxaButton title="Refresh" variant="ghost" onPress={() => void refresh()} />
+        {canAccessScreenshotPreview() ? (
+          <VoxaButton
+            title="Screenshot preview"
+            variant="ghost"
+            onPress={() => router.push('/(app)/screenshot-preview')}
+          />
+        ) : null}
         <VoxaButton title="Done" onPress={() => router.back()} />
       </ScrollView>
     </GradientBackground>

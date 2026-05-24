@@ -1,21 +1,13 @@
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { VoxaSplashScreen } from '@/components/splash/VoxaSplashScreen';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
-import { palette, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 
-export function ScreenLoading({ message = 'Loading…' }: { message?: string }) {
-  return (
-    <GradientBackground>
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={palette.cyan} />
-        <VoxaText variant="body" style={styles.loadingText}>
-          {message}
-        </VoxaText>
-      </View>
-    </GradientBackground>
-  );
+export function ScreenLoading({ message = 'Preparing your practice space…' }: { message?: string }) {
+  return <VoxaSplashScreen message={message} />;
 }
 
 export function ScreenEmpty({
@@ -61,16 +53,6 @@ export function ScreenError({
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  loadingText: {
-    textAlign: 'center',
-  },
   emptyWrap: {
     gap: spacing.md,
   },

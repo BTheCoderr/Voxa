@@ -15,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TextCorrectionCards } from '@/components/conversation/TextCorrectionCards';
 import { TextMessageList, type TextChatMessage } from '@/components/conversation/TextMessageList';
+import { TabletContent } from '@/components/layout/TabletContent';
+import { ScenarioStarterCard } from '@/components/practice/ScenarioStarterCard';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -42,7 +44,8 @@ import {
 import { getPreferredLanguage } from '@/lib/preferences/storage';
 import { useProgress } from '@/lib/progress/useProgress';
 import { markLessonCompleted } from '@/lib/lessons/progress';
-import { toApiLearningPath } from '@/lib/realtime/learningPath';
+import { getScenarioStarter } from '@/lib/practice/scenarioStarter';
+import { fromApiLearningPath, toApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 import { supabase } from '@/lib/supabase/client';
 import { fetchTtsAudio, getTtsUserErrorMessage, playBase64Audio } from '@/lib/tts/elevenLabsTts';
@@ -66,6 +69,7 @@ type TextSessionActiveProps = {
   userId: string;
   accessToken: string;
   learningPath: ReturnType<typeof toApiLearningPath>;
+  launchLanguage: ReturnType<typeof fromApiLearningPath>;
   pathOverline: string;
   /** When set, finishing a session with messages auto-marks the guided lesson complete. */
   lessonId?: string;
@@ -76,12 +80,17 @@ function TextSessionActive({
   userId,
   accessToken,
   learningPath,
+  launchLanguage,
   pathOverline,
   lessonId,
 }: TextSessionActiveProps) {
   const insets = useSafeAreaInsets();
   const { addXpFromSession } = useProgress();
   const listRef = useRef<ScrollView>(null);
+  const starter = useMemo(
+    () => getScenarioStarter(scenario.id, launchLanguage),
+    [scenario.id, launchLanguage],
+  );
 
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<TextChatMessage[]>([]);
@@ -122,6 +131,8 @@ function TextSessionActive({
     () => messages.map((m) => ({ role: m.role, content: m.text })),
     [messages],
   );
+
+  const hasUserMessages = useMemo(() => messages.some((m) => m.role === 'user'), [messages]);
 
   const ensureConversation = useCallback(async (): Promise<boolean> => {
     if (conversationIdRef.current) return true;
@@ -189,7 +200,6 @@ function TextSessionActive({
     setErrorMessage(null);
     setSessionSummary(null);
     setSessionStats(null);
-    setMessages([]);
     setLatestCorrections([]);
     setLatestEncouragement('');
     setLatestAssistantText('');
@@ -200,6 +210,7 @@ function TextSessionActive({
     lastAiMetaRef.current = {};
 
     if (!env.aiChatCoachConfigured) {
+      setMessages([]);
       setErrorMessage(
         'Text coach is not configured. Set EXPO_PUBLIC_AI_CHAT_COACH_URL and deploy the ai-chat-coach Edge Function.',
       );
@@ -209,10 +220,30 @@ function TextSessionActive({
     const ok = await ensureConversation();
     if (!ok) return;
 
+    const initialMessages: TextChatMessage[] = [];
+    if (starter.firstAssistantMessage) {
+      const assistantId = nextId('assistant');
+      initialMessages.push({
+        id: assistantId,
+        role: 'assistant',
+        text: starter.firstAssistantMessage,
+      });
+      setLatestAssistantText(starter.firstAssistantMessage);
+      void persistMessage('assistant', starter.firstAssistantMessage, assistantId);
+    }
+    setMessages(initialMessages);
+
     setSessionActive(true);
     setStartedAt(Date.now());
     trackEvent('text_session_started', { scenario_id: scenario.id });
-  }, [ensureConversation, scenario.id]);
+  }, [ensureConversation, persistMessage, scenario.id, starter.firstAssistantMessage]);
+
+  const sessionInitRef = useRef(false);
+  useEffect(() => {
+    if (sessionInitRef.current || sessionActive || sessionSummary !== null) return;
+    sessionInitRef.current = true;
+    void startSession();
+  }, [sessionActive, sessionSummary, startSession]);
 
   const sendMessage = useCallback(async () => {
     const text = draft.trim();
@@ -331,7 +362,7 @@ function TextSessionActive({
     if (sessionEndedRef.current) return;
     sessionEndedRef.current = true;
 
-    const hadMessages = messages.length > 0;
+    const hadMessages = hasUserMessages;
     const durationSeconds = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : 0;
     const xpEarned = hadMessages ? XP_FOR_SESSION : 0;
     const correctionCount = correctionCountRef.current;
@@ -375,7 +406,7 @@ function TextSessionActive({
       message_count: messages.length,
       xp_earned: xpEarned,
     });
-  }, [addXpFromSession, lessonId, messages.length, scenario, startedAt, userId]);
+  }, [addXpFromSession, hasUserMessages, lessonId, messages.length, scenario, startedAt, userId]);
 
   const showRecap = sessionSummary !== null;
 
@@ -390,10 +421,11 @@ function TextSessionActive({
             styles.container,
             { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.md },
           ]}>
+          <TabletContent fullWidth style={styles.tablet}>
           <View style={styles.topBar}>
             <Pressable
               onPress={() => {
-                if (sessionActive && messages.length > 0) {
+                if (sessionActive && hasUserMessages) {
                   Alert.alert('End session?', 'Your progress will be saved.', [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'End', style: 'destructive', onPress: () => void endSession() },
@@ -403,13 +435,14 @@ function TextSessionActive({
                   setSessionActive(false);
                   setStartedAt(null);
                   conversationIdRef.current = null;
+                  router.back();
                 } else {
                   router.back();
                 }
               }}
               hitSlop={12}>
               <VoxaText variant="caption" style={styles.close}>
-                {sessionActive ? 'End' : 'Close'}
+                Close
               </VoxaText>
             </Pressable>
           </View>
@@ -440,85 +473,82 @@ function TextSessionActive({
               <VoxaButton title="Done" onPress={() => router.back()} containerStyle={styles.gap} />
             </GlassPanel>
           ) : (
-            <>
-              {!sessionActive ? (
-                <GlassPanel style={styles.panel}>
-                  <VoxaText variant="body">
-                    Type or dictate your line. Voxa will reply, correct you gently, and help you sound more
-                    natural.
-                  </VoxaText>
-                  <VoxaText variant="caption" style={styles.helperMuted}>
-                    Text practice — not full voice conversation. Tap &quot;Hear this response&quot; after a reply
-                    for optional playback.
-                  </VoxaText>
-                  {errorMessage ? (
-                    <VoxaText variant="body" style={styles.error}>
-                      {errorMessage}
-                    </VoxaText>
-                  ) : null}
-                  <VoxaButton title="Start text practice" onPress={() => void startSession()} containerStyle={styles.gap} />
-                </GlassPanel>
-              ) : (
-                <View style={styles.sessionBody}>
-                  <TextMessageList
-                    messages={messages}
-                    listRef={listRef}
-                    footer={
-                      <>
-                        <TextCorrectionCards items={latestCorrections} encouragement={latestEncouragement} />
-                        {latestAssistantText && !busy ? (
-                          <View style={styles.voiceRow}>
-                            <VoxaButton
-                              title={ttsBusy ? 'Loading…' : 'Hear this response'}
-                              variant="ghost"
-                              disabled={ttsBusy}
-                              onPress={() => void playAssistantVoice()}
-                            />
-                          </View>
-                        ) : null}
-                        {ttsError ? (
-                          <VoxaText variant="body" style={styles.ttsError}>
-                            {ttsError}
-                          </VoxaText>
-                        ) : null}
-                      </>
-                    }
-                  />
-                  <View style={styles.bottomDock}>
-                    {errorMessage ? (
-                      <VoxaText variant="body" style={styles.error}>
-                        {errorMessage}
-                      </VoxaText>
+            <View style={styles.sessionBody}>
+              <TextMessageList
+                messages={messages}
+                listRef={listRef}
+                footer={
+                  <>
+                    {!hasUserMessages ? (
+                      <ScenarioStarterCard
+                        starter={starter}
+                        onUseSuggestedReply={(text) => setDraft(text)}
+                      />
                     ) : null}
-                    {busy ? (
-                      <View style={styles.rowCenter}>
-                        <ActivityIndicator color={palette.cyan} />
-                        <VoxaText variant="body">Voxa is thinking…</VoxaText>
+                    <TextCorrectionCards items={latestCorrections} encouragement={latestEncouragement} />
+                    {latestAssistantText && !busy ? (
+                      <View style={styles.voiceRow}>
+                        <VoxaButton
+                          title={ttsBusy ? 'Loading…' : 'Hear this response'}
+                          variant="ghost"
+                          disabled={ttsBusy}
+                          onPress={() => void playAssistantVoice()}
+                        />
                       </View>
                     ) : null}
-                    <View style={styles.composer}>
-                      <TextInput
-                        value={draft}
-                        onChangeText={setDraft}
-                        placeholder="Type or dictate your line…"
-                        placeholderTextColor={palette.textMuted}
-                        multiline
-                        style={styles.input}
-                        editable={!busy}
-                      />
-                      <VoxaButton
-                        title="Send"
-                        disabled={busy || !draft.trim()}
-                        onPress={() => void sendMessage()}
-                        containerStyle={styles.sendBtn}
-                      />
-                    </View>
-                    <VoxaButton title="Finish session" variant="ghost" onPress={() => void endSession()} />
-                  </View>
+                    {ttsError ? (
+                      <VoxaText variant="body" style={styles.ttsError}>
+                        {ttsError}
+                      </VoxaText>
+                    ) : null}
+                  </>
+                }
+              />
+              {!sessionActive && !errorMessage ? (
+                <View style={styles.rowCenter}>
+                  <ActivityIndicator color={palette.cyan} />
+                  <VoxaText variant="body">Starting session…</VoxaText>
                 </View>
-              )}
-            </>
+              ) : null}
+              <View style={styles.bottomDock}>
+                {errorMessage ? (
+                  <VoxaText variant="body" style={styles.error}>
+                    {errorMessage}
+                  </VoxaText>
+                ) : null}
+                {busy ? (
+                  <View style={styles.rowCenter}>
+                    <ActivityIndicator color={palette.cyan} />
+                    <VoxaText variant="body">Voxa is thinking…</VoxaText>
+                  </View>
+                ) : null}
+                <View style={styles.composer}>
+                  <TextInput
+                    value={draft}
+                    onChangeText={setDraft}
+                    placeholder="Type or dictate your line…"
+                    placeholderTextColor={palette.textMuted}
+                    multiline
+                    style={styles.input}
+                    editable={sessionActive && !busy}
+                  />
+                  <VoxaButton
+                    title="Send"
+                    disabled={!sessionActive || busy || !draft.trim()}
+                    onPress={() => void sendMessage()}
+                    containerStyle={styles.sendBtn}
+                  />
+                </View>
+                <VoxaButton
+                  title="Finish session"
+                  variant="ghost"
+                  disabled={!sessionActive}
+                  onPress={() => void endSession()}
+                />
+              </View>
+            </View>
           )}
+          </TabletContent>
         </View>
       </KeyboardAvoidingView>
     </GradientBackground>
@@ -594,6 +624,7 @@ export default function TextPracticeScreen() {
       userId={user.id}
       accessToken={session.access_token}
       learningPath={learningPath}
+      launchLanguage={fromApiLearningPath(learningPath)}
       pathOverline={pathOverline}
       lessonId={lessonId}
     />
@@ -606,6 +637,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.xl,
     gap: spacing.md,
+  },
+  tablet: {
+    flex: 1,
+    alignSelf: 'stretch',
   },
   topBar: {
     flexDirection: 'row',

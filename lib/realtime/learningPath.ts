@@ -9,3 +9,10 @@ export function toApiLearningPath(lang: LaunchLanguage): ApiLearningPath {
   }
   return lang;
 }
+
+export function fromApiLearningPath(path: ApiLearningPath): LaunchLanguage {
+  if (path === 'business_english') {
+    return 'english_business';
+  }
+  return path;
+}
