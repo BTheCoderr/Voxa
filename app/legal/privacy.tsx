@@ -1,8 +1,9 @@
-import { ScrollView, StyleSheet } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaText } from '@/components/ui/VoxaText';
+import { LEGAL } from '@/constants/legal';
 import { spacing } from '@/constants/theme';
 
 export default function PrivacyScreen() {
@@ -17,22 +18,49 @@ export default function PrivacyScreen() {
         ]}>
         <VoxaText variant="title">Privacy</VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          This in-app summary describes how Voxa handles your data. Your App Store listing should link to the same policy
-          on the web.
+          Voxa helps you practice speaking with AI. This summary explains how we handle your information in the mobile
+          app. The full policy is also available on the web.
         </VoxaText>
+
         <VoxaText variant="lead" style={styles.h2}>
-          What we collect today
+          What we collect
         </VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          Voxa may process text you type for AI practice, optional voice playback, account data in Supabase when you sign
-          in, and product analytics if enabled in your build.
+          • Account: email and password when you sign in (stored with Supabase Auth).{'\n'}• Practice: text you type for
+          AI coaching and optional voice playback requests.{'\n'}• Progress: lesson completion, XP, streaks, and session
+          history when signed in.{'\n'}• Analytics: optional product events if analytics is enabled in your build (no ads).
         </VoxaText>
+
+        <VoxaText variant="lead" style={styles.h2}>
+          How we use it
+        </VoxaText>
+        <VoxaText variant="body" style={styles.p}>
+          We use your data to run practice sessions, save progress across devices, improve reliability, and respond to
+          support requests. AI processing is handled through our secure backend — API keys for AI providers are not
+          stored on your device.
+        </VoxaText>
+
+        <VoxaText variant="lead" style={styles.h2}>
+          Your choices
+        </VoxaText>
+        <VoxaText variant="body" style={styles.p}>
+          You can sign out anytime from Profile. To permanently delete your account and associated app data, go to Profile
+          → Delete account, type DELETE, and confirm.
+        </VoxaText>
+
         <VoxaText variant="lead" style={styles.h2}>
           Contact
         </VoxaText>
-        <VoxaText variant="body" style={styles.p}>
-          List a support email in App Store Connect and match it here when you publish the final policy URL.
-        </VoxaText>
+        <Pressable onPress={() => void Linking.openURL(`mailto:${LEGAL.supportEmail}`)}>
+          <VoxaText variant="body" style={styles.link}>
+            {LEGAL.supportEmail}
+          </VoxaText>
+        </Pressable>
+        <Pressable onPress={() => void Linking.openURL(LEGAL.privacyPolicyUrl)}>
+          <VoxaText variant="body" style={styles.link}>
+            Full privacy policy on the web
+          </VoxaText>
+        </Pressable>
       </ScrollView>
     </GradientBackground>
   );
@@ -49,5 +77,10 @@ const styles = StyleSheet.create({
   },
   h2: {
     marginTop: spacing.sm,
+  },
+  link: {
+    color: '#38D9FF',
+    fontWeight: '600',
+    lineHeight: 22,
   },
 });

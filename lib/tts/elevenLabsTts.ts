@@ -42,7 +42,7 @@ export function getTtsUserErrorMessage(error: unknown): string {
     raw.includes('paid plan') ||
     raw.includes('tts_provider_quota')
   ) {
-    return 'Voice playback needs ElevenLabs credits or a paid plan.';
+    return 'Voice playback is temporarily unavailable. Text practice still works.';
   }
   if (raw.includes('sign in again')) {
     return 'Please sign in again.';
@@ -77,7 +77,7 @@ function throwTtsHttpError(res: Response, json: ErrorBody | undefined, raw: stri
   }
 
   if (code === 'tts_provider_quota') {
-    throw new Error('Voice playback needs ElevenLabs credits or a paid plan.');
+    throw new Error('Voice playback is temporarily unavailable. Text practice still works.');
   }
 
   if (code === 'tts_daily_limit') {

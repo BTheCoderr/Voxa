@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
         providerErr.providerCode === "payment_required"
       ) {
         return errorResponse(
-          "Voice playback needs ElevenLabs credits or a paid plan for this voice.",
+          "Voice playback is temporarily unavailable.",
           402,
           "tts_provider_quota",
         );
