@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { TabletContent } from '@/components/layout/TabletContent';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -140,7 +139,7 @@ export default function SignInScreen() {
     }
 
     trackEvent('sign_in_completed', { method: 'magic_link' });
-    Alert.alert('Check your email', 'We sent a sign-in link. Magic link is optional — password sign-in is faster for beta.');
+    Alert.alert('Check your email', 'We sent a sign-in link. You can also sign in with your password.');
   };
 
   const primaryLabel = busy
@@ -252,7 +251,6 @@ export default function SignInScreen() {
             />
           ) : null}
 
-          <BetaDisclaimer compact />
 
           <VoxaButton variant="ghost" title="Back" onPress={() => router.back()} containerStyle={styles.back} />
           </TabletContent>

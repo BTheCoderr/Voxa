@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -19,9 +18,10 @@ export default function MicrophoneScreen() {
           <VoxaText variant="caption" style={styles.overline}>
             Step 3 of 3
           </VoxaText>
-          <VoxaText variant="title">Your voice is the practice space</VoxaText>
+          <VoxaText variant="title">Practice on your terms</VoxaText>
           <VoxaText variant="body">
-            Voxa uses your microphone for realtime speaking. We will ask for permission when you start your first conversation.
+            Most practice happens by typing your responses. If a session needs your microphone, we will ask for permission
+            when you start it.
           </VoxaText>
         </View>
 
@@ -32,7 +32,6 @@ export default function MicrophoneScreen() {
           </VoxaText>
         </GlassPanel>
 
-        <BetaDisclaimer compact />
 
         <VoxaButton
           title={isGuidedLessonsEnabled() ? 'Continue to setup' : 'Enter Voxa'}

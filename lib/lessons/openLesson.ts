@@ -2,6 +2,8 @@ import { router } from 'expo-router';
 
 import type { LaunchLanguage, ScenarioId } from '@/constants/scenarios';
 import { isTextPracticeMode } from '@/lib/ai/mode';
+import { isLiveVoicePracticeAvailable } from '@/lib/presentation/voicePracticeEnabled';
+import { showUnreleasedFeatures } from '@/lib/presentation/showUnreleasedFeatures';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 
 export function openLessonPractice(
@@ -11,7 +13,7 @@ export function openLessonPractice(
 ): void {
   const path = toApiLearningPath(language);
 
-  if (isTextPracticeMode()) {
+  if (isTextPracticeMode() || !isLiveVoicePracticeAvailable()) {
     router.push({
       pathname: '/(app)/text-practice/[scenarioId]',
       params: { scenarioId, path, lessonId },
@@ -26,6 +28,11 @@ export function openLessonPractice(
 }
 
 export function openImmersivePractice(lessonId: string): void {
+  if (!showUnreleasedFeatures()) {
+    openLessonDetail(lessonId);
+    return;
+  }
+
   router.push({
     pathname: '/(app)/immersive-practice/[lessonId]',
     params: { lessonId },

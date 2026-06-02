@@ -11,7 +11,6 @@ import { VoiceWaveDecoration } from '@/components/marketing/VoiceWaveDecoration'
 import { ChatBubble } from '@/components/onboarding/ChatBubble';
 import { OnboardingProgressBar } from '@/components/onboarding/OnboardingProgressBar';
 import { VoxaOrb } from '@/components/onboarding/VoxaOrb';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -115,7 +114,6 @@ function WelcomeFrame() {
       <VoxaText variant="lead">
         Practice real conversations in Business English, Spanish, and Mandarin.
       </VoxaText>
-      <BetaDisclaimer compact />
       <VoxaButton title="Start practicing" containerStyle={styles.frameGap} />
       <VoxaButton title="I already have an account" variant="ghost" />
     </View>
@@ -161,7 +159,6 @@ function LessonMapFrame({
       </VoxaText>
       <VoxaText variant="title">Spanish</VoxaText>
       <VoxaText variant="body">Beginner path · 5 lessons</VoxaText>
-      <BetaDisclaimer compact />
       {lessons.map((lesson, index) => (
         <View key={lesson.id}>
           {index > 0 ? <View style={styles.connector} /> : null}
@@ -190,7 +187,6 @@ function TextPracticeFrame({
         Text Practice · Spanish
       </VoxaText>
       <VoxaText variant="title">Networking</VoxaText>
-      <BetaDisclaimer compact />
       <TextMessageList messages={messages} />
       <TextCorrectionCards items={corrections} encouragement="Nice effort — one small tweak will sound more natural." />
       <VoxaButton title="Send" containerStyle={styles.frameGap} />
@@ -225,7 +221,6 @@ function ProgressFrame() {
         Momentum
       </VoxaText>
       <VoxaText variant="title">Confidence, measured gently</VoxaText>
-      <BetaDisclaimer compact />
       <View style={styles.progressRow}>
         <GlassPanel style={styles.tile}>
           <VoxaText variant="caption">Streak</VoxaText>

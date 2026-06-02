@@ -6,7 +6,6 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { LessonNodeCard } from '@/components/lessons/LessonNodeCard';
 import { TabletContent } from '@/components/layout/TabletContent';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -73,7 +72,6 @@ export default function LessonMapScreen() {
         </VoxaText>
         <VoxaText variant="title">{launchLanguageLabel(language)}</VoxaText>
         <VoxaText variant="body">{levelLabel(level)} path · {lessons.length} lessons</VoxaText>
-        <BetaDisclaimer compact />
 
         <VoxaText variant="muted" style={styles.hint}>
           Complete each lesson to unlock the next. Practice saves to History and XP as usual.

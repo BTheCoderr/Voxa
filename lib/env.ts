@@ -3,6 +3,7 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const REALTIME_SESSION_URL = process.env.EXPO_PUBLIC_REALTIME_SESSION_URL ?? '';
 const AI_CHAT_COACH_URL = process.env.EXPO_PUBLIC_AI_CHAT_COACH_URL ?? '';
 const ELEVENLABS_TTS_URL = process.env.EXPO_PUBLIC_ELEVENLABS_TTS_URL ?? '';
+const DELETE_ACCOUNT_URL = process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL ?? '';
 const AI_MODE_RAW = process.env.EXPO_PUBLIC_AI_MODE ?? 'text';
 
 export type AiMode = 'text' | 'voice';
@@ -15,12 +16,14 @@ export const env = {
   supabaseUrl: SUPABASE_URL,
   supabaseAnonKey: SUPABASE_ANON_KEY,
   supabaseConfigured: Boolean(SUPABASE_URL && SUPABASE_ANON_KEY),
-  /** `text` = Groq/Gemini via Edge Function (default). `voice` = OpenAI Realtime (premium/experimental). */
+  /** `text` = Groq/Gemini via Edge Function (default). `voice` = OpenAI Realtime (dev/screenshot only). */
   aiMode: parseAiMode(AI_MODE_RAW),
   aiChatCoachUrl: AI_CHAT_COACH_URL,
   aiChatCoachConfigured: Boolean(AI_CHAT_COACH_URL),
   elevenLabsTtsUrl: ELEVENLABS_TTS_URL,
   elevenLabsTtsConfigured: Boolean(ELEVENLABS_TTS_URL),
+  deleteAccountUrl: DELETE_ACCOUNT_URL,
+  deleteAccountConfigured: Boolean(DELETE_ACCOUNT_URL),
   posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '',
   posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com',
   revenueCatIos: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '',

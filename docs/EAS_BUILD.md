@@ -158,6 +158,7 @@ Reference secrets in **eas.json** if you use `env` blocks per profile, or set th
 | `EXPO_PUBLIC_AI_MODE` | `text` (default) or `voice` (premium) |
 | `EXPO_PUBLIC_AI_CHAT_COACH_URL` | Groq/Gemini text coach Edge Function |
 | `EXPO_PUBLIC_ELEVENLABS_TTS_URL` | Optional “Hear this response” playback |
+| `EXPO_PUBLIC_DELETE_ACCOUNT_URL` | Account deletion Edge Function (`delete-account`) |
 
 Optional:
 

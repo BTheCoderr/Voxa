@@ -31,6 +31,12 @@ export function getTtsUserErrorMessage(error: unknown): string {
   if (raw.includes('Voice key is not configured correctly')) {
     return 'Voice key is not configured correctly.';
   }
+  if (raw.includes('Daily voice playback limit reached')) {
+    return 'Daily voice playback limit reached. Text practice still works.';
+  }
+  if (raw.includes('Text practice still works')) {
+    return raw;
+  }
   if (
     raw.includes('ElevenLabs credits') ||
     raw.includes('paid plan') ||
@@ -72,6 +78,14 @@ function throwTtsHttpError(res: Response, json: ErrorBody | undefined, raw: stri
 
   if (code === 'tts_provider_quota') {
     throw new Error('Voice playback needs ElevenLabs credits or a paid plan.');
+  }
+
+  if (code === 'tts_daily_limit') {
+    throw new Error('Daily voice playback limit reached. Text practice still works.');
+  }
+
+  if (code === 'tts_disabled') {
+    throw new Error('Voice playback is temporarily unavailable. Text practice still works.');
   }
 
   if (res.status === 401 || res.status === 403) {

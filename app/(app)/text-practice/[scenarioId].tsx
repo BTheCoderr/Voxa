@@ -17,7 +17,6 @@ import { TextCorrectionCards } from '@/components/conversation/TextCorrectionCar
 import { TextMessageList, type TextChatMessage } from '@/components/conversation/TextMessageList';
 import { TabletContent } from '@/components/layout/TabletContent';
 import { ScenarioStarterCard } from '@/components/practice/ScenarioStarterCard';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -453,7 +452,6 @@ function TextSessionActive({
             </VoxaText>
             <VoxaText variant="title">{scenario.title}</VoxaText>
             <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
-            <BetaDisclaimer compact />
           </View>
 
           {showRecap ? (

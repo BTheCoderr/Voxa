@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { TabletContent } from '@/components/layout/TabletContent';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -60,7 +59,6 @@ export default function LanguageScreen() {
               router.push('/(onboarding)/goals');
             }}
           />
-          <BetaDisclaimer compact />
         </TabletContent>
       </ScrollView>
     </GradientBackground>

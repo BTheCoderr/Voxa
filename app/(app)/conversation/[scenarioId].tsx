@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CorrectionChips } from '@/components/conversation/CorrectionChips';
 import { LiveTranscriptList } from '@/components/conversation/LiveTranscriptList';
 import { VoiceOrb } from '@/components/conversation/VoiceOrb';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -25,6 +24,7 @@ import {
 } from '@/lib/db/conversations';
 import { env } from '@/lib/env';
 import { DEFAULT_LAUNCH_LANGUAGE, parseApiLearningPath } from '@/lib/learningPath/display';
+import { isLiveVoicePracticeAvailable } from '@/lib/presentation/voicePracticeEnabled';
 import { getPreferredLanguage } from '@/lib/preferences/storage';
 import { useProgress } from '@/lib/progress/useProgress';
 import { toApiLearningPath, type ApiLearningPath } from '@/lib/realtime/learningPath';
@@ -279,7 +279,6 @@ function ConversationSessionActive({
           </VoxaText>
           <VoxaText variant="title">{scenario.title}</VoxaText>
           <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
-          <BetaDisclaimer compact />
         </View>
 
         <View style={styles.orb}>
@@ -299,7 +298,6 @@ function ConversationSessionActive({
                 <VoxaText variant="body">Gentle notes · {sessionStats.correctionCount}</VoxaText>
               </View>
             ) : null}
-            <BetaDisclaimer compact />
             <VoxaButton
               title="View history"
               variant="ghost"
@@ -391,7 +389,6 @@ export default function ConversationScreen() {
           <VoxaText variant="body" style={styles.centerText}>
             The link may be out of date. Head back and pick a scenario from the list.
           </VoxaText>
-          <BetaDisclaimer compact />
           <VoxaButton title="Go back" onPress={() => router.back()} containerStyle={{ marginTop: spacing.lg }} />
         </View>
       </GradientBackground>
@@ -406,7 +403,6 @@ export default function ConversationScreen() {
           <VoxaText variant="body" style={styles.centerText}>
             Voice sessions use a secure server — sign in on the Profile tab first.
           </VoxaText>
-          <BetaDisclaimer compact />
           <VoxaButton title="Go to profile" onPress={() => router.replace('/(app)/(tabs)/profile')} />
         </View>
       </GradientBackground>
@@ -420,6 +416,17 @@ export default function ConversationScreen() {
           <ActivityIndicator color={palette.cyan} />
         </View>
       </GradientBackground>
+    );
+  }
+
+  if (!isLiveVoicePracticeAvailable()) {
+    return (
+      <Redirect
+        href={{
+          pathname: '/(app)/text-practice/[scenarioId]',
+          params: { scenarioId: scenario.id, path: learningPath },
+        }}
+      />
     );
   }
 

@@ -10,7 +10,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -101,14 +100,13 @@ export default function HistoryScreen() {
             <PolishedEmptyState
               title="Sign in to sync your journal"
               body="Progress can stay on this device, or create an account to keep session history consistent across installs."
-              footnote="Beta: sign in with email and password on the Profile tab."
+              footnote="Sign in with email and password on the Profile tab."
               compact
             />
           ) : (
             <PolishedEmptyState
-              title="Cloud history unavailable in this build"
-              body="This install is missing Supabase environment keys. Session history sync is turned off until the app is configured."
-              footnote="Builders: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY."
+              title="History sync is off"
+              body="This install cannot reach your account server. Reinstall from the App Store or contact support if the problem continues."
               compact
             />
           )}
@@ -125,9 +123,6 @@ export default function HistoryScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg }]}>
-        <VoxaText variant="caption" style={styles.betaTag}>
-          TestFlight beta
-        </VoxaText>
         <VoxaText variant="title" style={styles.title}>
           Conversation history
         </VoxaText>
@@ -175,8 +170,6 @@ export default function HistoryScreen() {
           )}
         />
 
-        <BetaDisclaimer compact />
-
         <VoxaButton title="Practice" onPress={() => router.replace('/(app)/(tabs)')} />
       </View>
     </GradientBackground>
@@ -191,11 +184,6 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: spacing.sm,
-  },
-  betaTag: {
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    opacity: 0.85,
   },
   empty: {
     marginTop: spacing.md,

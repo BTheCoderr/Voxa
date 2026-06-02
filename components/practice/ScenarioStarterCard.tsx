@@ -31,7 +31,7 @@ export function ScenarioStarterCard({ starter, onUseSuggestedReply }: ScenarioSt
         </Pressable>
       ) : null}
       <VoxaText variant="caption" style={styles.hint}>
-        Voice playback is manual — tap &quot;Hear this response&quot; after a reply.
+        Tap Hear this response to listen to the latest reply.
       </VoxaText>
     </GlassPanel>
   );

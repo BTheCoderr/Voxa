@@ -15,17 +15,17 @@ export default function PrivacyScreen() {
           styles.body,
           { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl },
         ]}>
-        <VoxaText variant="title">Privacy (beta placeholder)</VoxaText>
+        <VoxaText variant="title">Privacy</VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          This screen is a placeholder for TestFlight. Replace the content below with your real privacy policy before App
-          Store review.
+          This in-app summary describes how Voxa handles your data. Your App Store listing should link to the same policy
+          on the web.
         </VoxaText>
         <VoxaText variant="lead" style={styles.h2}>
           What we collect today
         </VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          During beta, the app may process voice audio for AI practice sessions, store optional account data in Supabase
-          when you sign in, and send product analytics if PostHog is configured.
+          Voxa may process text you type for AI practice, optional voice playback, account data in Supabase when you sign
+          in, and product analytics if enabled in your build.
         </VoxaText>
         <VoxaText variant="lead" style={styles.h2}>
           Contact

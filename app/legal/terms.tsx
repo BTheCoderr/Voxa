@@ -15,17 +15,17 @@ export default function TermsScreen() {
           styles.body,
           { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.xl },
         ]}>
-        <VoxaText variant="title">Terms (beta placeholder)</VoxaText>
+        <VoxaText variant="title">Terms of use</VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          Placeholder for TestFlight. Add your full terms of service before production. This beta is provided as-is for
-          early feedback.
+          By using Voxa you agree to these terms. Replace or supplement this in-app summary with your published terms URL
+          in App Store Connect.
         </VoxaText>
         <VoxaText variant="lead" style={styles.h2}>
           Practice tool
         </VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          Voxa is a speaking practice aid. It is not a certified language test, immigration service, or professional
-          tutoring replacement. AI output may be wrong or inappropriate — use your judgment.
+          Voxa is a speaking practice app. It does not provide certified language certification, legal, immigration, or
+          professional tutoring services. AI output may be inaccurate — use your judgment.
         </VoxaText>
       </ScrollView>
     </GradientBackground>

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabletContent } from '@/components/layout/TabletContent';
 import { VoiceWaveDecoration } from '@/components/marketing/VoiceWaveDecoration';
 import { VoxaOrb } from '@/components/onboarding/VoxaOrb';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
+import { AppTagline } from '@/components/ui/AppTagline';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -45,7 +45,7 @@ export default function WelcomeScreen() {
             Practice real conversations in Business English, Spanish, and Mandarin.
           </VoxaText>
 
-          <BetaDisclaimer compact />
+          <AppTagline compact />
 
           <VoxaButton
             title="Start practicing"

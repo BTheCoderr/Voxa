@@ -9,7 +9,6 @@ import { PracticeModeFraming } from '@/components/practice/PracticeModeFraming';
 import { ScenarioCard } from '@/components/scenario/ScenarioCard';
 import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
 import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
@@ -19,7 +18,8 @@ import { SCENARIOS, type LaunchLanguage } from '@/constants/scenarios';
 import { spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
 import { openScenarioPractice } from '@/lib/ai/openPractice';
-import { isTextPracticeMode, isVoicePracticeMode } from '@/lib/ai/mode';
+import { isTextPracticeMode } from '@/lib/ai/mode';
+import { isLiveVoicePracticeAvailable } from '@/lib/presentation/voicePracticeEnabled';
 import { isGuidedLessonsEnabled } from '@/lib/lessons/guidedLessonsEnabled';
 import { openLessonDetail, openLessonMap } from '@/lib/lessons/openLesson';
 import {
@@ -31,6 +31,7 @@ import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath
 import type { LearnerLevel, LessonNode } from '@/lib/learning/types';
 import { getGuidedProfile } from '@/lib/onboarding/guidedProfile';
 import { isScreenshotMode } from '@/lib/presentation/screenshotMode';
+import { showUnreleasedFeatures } from '@/lib/presentation/showUnreleasedFeatures';
 import { getPreferredLanguage, setPreferredLanguage } from '@/lib/preferences/storage';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -89,15 +90,14 @@ export default function ScenariosHomeScreen() {
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <VoxaText variant="caption" style={styles.overline}>
-              {isVoicePracticeMode() ? 'Live voice · Premium' : 'Text practice · Low cost'}
+              {isLiveVoicePracticeAvailable() ? 'Live conversation' : 'Speaking practice'}
             </VoxaText>
             <VoxaText variant="title">Practice</VoxaText>
             <VoxaText variant="body">
-              {isVoicePracticeMode()
-                ? 'Live voice practice — speak out loud. Experimental premium mode.'
-                : 'Quick scenarios or a structured lesson path — voice playback is manual.'}
+              {isLiveVoicePracticeAvailable()
+                ? 'Preview live voice sessions in this build. Production users practice with text and optional reply audio.'
+                : 'Quick scenarios and guided lessons. Type your lines, review feedback, and listen to replies when you choose.'}
             </VoxaText>
-            <BetaDisclaimer compact />
           </View>
           <Pressable onPress={() => router.push('/(app)/history')} style={styles.historyHit}>
             <VoxaText variant="caption" style={styles.history}>
@@ -155,7 +155,7 @@ export default function ScenariosHomeScreen() {
           {guidedEnabled && showContinue ? ` · ${pathLevel} path in progress` : ''}
         </VoxaText>
 
-        {!isScreenshotMode() && !isVoicePracticeMode() ? <PracticeModeFraming /> : null}
+        {!isScreenshotMode() && isTextPracticeMode() ? <PracticeModeFraming /> : null}
 
         {isScreenshotMode() ? <ScreenshotMarketingBanner /> : null}
 
@@ -173,12 +173,11 @@ export default function ScenariosHomeScreen() {
               <ScenarioCard
                 key={scenario.id}
                 scenario={scenario}
-                actionLabel={isVoicePracticeMode() ? 'Start voice practice' : 'Start text practice'}
-                badge={isVoicePracticeMode() ? undefined : 'Text'}
+                actionLabel="Start practice"
                 onPress={() => {
                   trackEvent('scenario_selected', {
                     scenario_id: scenario.id,
-                    mode: isVoicePracticeMode() ? 'voice' : 'text',
+                    mode: 'text',
                     learning_path: effectiveLanguage,
                   });
                   openScenarioPractice(scenario.id, effectiveLanguage);
@@ -188,7 +187,7 @@ export default function ScenariosHomeScreen() {
           </View>
         )}
 
-        {isTextPracticeMode() ? (
+        {isTextPracticeMode() && showUnreleasedFeatures() ? (
           <Pressable
             style={styles.premiumRow}
             onPress={() => {

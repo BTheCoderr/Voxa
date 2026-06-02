@@ -24,7 +24,7 @@ export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <PostHogProvider client={client} autocapture>
+    <PostHogProvider client={client} autocapture={false}>
       {children}
     </PostHogProvider>
   );

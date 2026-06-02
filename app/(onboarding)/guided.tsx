@@ -15,7 +15,6 @@ import { ChatBubble } from '@/components/onboarding/ChatBubble';
 import { OnboardingProgressBar } from '@/components/onboarding/OnboardingProgressBar';
 import { VoxaOrb } from '@/components/onboarding/VoxaOrb';
 import { TabletContent } from '@/components/layout/TabletContent';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -92,7 +91,7 @@ export default function GuidedOnboardingScreen() {
       case 'explanation_language':
         return 'When I explain corrections, which language should I use?';
       case 'completion':
-        return 'You’re set. Your lesson map is ready — first lesson unlocked. Voice playback is manual; tap “Hear this” when you want audio.';
+        return 'You’re set. Your lesson map is ready — start with the first lesson. Tap Hear this response after a reply when you want audio.';
       default:
         return '';
     }
@@ -328,7 +327,6 @@ export default function GuidedOnboardingScreen() {
 
             <View style={styles.choices}>{renderChoices()}</View>
 
-            <BetaDisclaimer compact />
 
             <VoxaButton
               title={step === 'completion' ? 'Open lesson map' : 'Continue'}

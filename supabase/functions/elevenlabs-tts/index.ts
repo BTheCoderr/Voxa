@@ -3,14 +3,20 @@
  *
  * Secrets:
  *   ELEVENLABS_API_KEY — required (ElevenLabs API key, usually starts with sk_)
- *   ELEVENLABS_MODEL   — optional (default eleven_multilingual_v2)
- *   ELEVENLABS_DEFAULT_VOICE_ID — optional (default Rachel premade voice)
+ *   ELEVENLABS_MODEL   — optional (default eleven_flash_v2_5)
+ *   ELEVENLABS_DEFAULT_VOICE_ID — optional
+ *   ELEVENLABS_TTS_ENABLED — optional kill switch (default enabled; set false/0/off to disable)
+ *
+ * Quota: 10 plays per user per UTC day; max 300 characters per request.
  *
  * GET ?health=1 — safe status (no keys exposed)
- * POST { "text": "Voice test" } — minimal test (scenarioId/learningPath optional)
+ * POST { "text": "..." } — requires Authorization Bearer JWT
  */
 
-const MAX_TEXT_CHARS = 500;
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+const MAX_TEXT_CHARS = 300;
+const MAX_PLAYS_PER_DAY = 10;
 /** Lower cost; works on free-tier API access. */
 const DEFAULT_MODEL = "eleven_flash_v2_5";
 /** Sarah — premade voice available on free-tier API (Rachel requires paid plan). */
@@ -64,6 +70,92 @@ function safeKeyPrefix(key: string): string {
 function getApiKey(): string | null {
   const key = Deno.env.get("ELEVENLABS_API_KEY")?.trim();
   return key || null;
+}
+
+function isTtsEnabled(): boolean {
+  const raw = Deno.env.get("ELEVENLABS_TTS_ENABLED")?.trim().toLowerCase();
+  if (!raw) return true;
+  return raw !== "false" && raw !== "0" && raw !== "off";
+}
+
+function getBearerToken(req: Request): string | null {
+  const auth = req.headers.get("Authorization")?.trim();
+  if (!auth?.toLowerCase().startsWith("bearer ")) return null;
+  const token = auth.slice(7).trim();
+  return token || null;
+}
+
+function utcToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function resolveUserId(req: Request): Promise<string | null> {
+  const token = getBearerToken(req);
+  if (!token) return null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+  if (!supabaseUrl || !anonKey) return null;
+
+  const client = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await client.auth.getUser();
+  if (error || !data.user) return null;
+  return data.user.id;
+}
+
+function getServiceAdmin() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceRoleKey) return null;
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function getDailyPlayCount(userId: string): Promise<number | null> {
+  const admin = getServiceAdmin();
+  if (!admin) return null;
+
+  const { data: row, error } = await admin
+    .from("tts_usage")
+    .select("play_count")
+    .eq("user_id", userId)
+    .eq("usage_date", utcToday())
+    .maybeSingle();
+
+  if (error) {
+    console.error(JSON.stringify({ event: "tts_quota_select_error", message: error.message }));
+    return null;
+  }
+
+  return row?.play_count ?? 0;
+}
+
+async function incrementDailyPlayCount(userId: string): Promise<void> {
+  const admin = getServiceAdmin();
+  if (!admin) return;
+
+  const usageDate = utcToday();
+  const current = await getDailyPlayCount(userId);
+  if (current === null) return;
+
+  if (current > 0) {
+    await admin
+      .from("tts_usage")
+      .update({ play_count: current + 1 })
+      .eq("user_id", userId)
+      .eq("usage_date", usageDate);
+  } else {
+    await admin.from("tts_usage").insert({
+      user_id: userId,
+      usage_date: usageDate,
+      play_count: 1,
+    });
+  }
 }
 
 function parseBody(raw: string): TtsRequest {
@@ -193,9 +285,12 @@ async function callElevenLabsTts(
 
 function healthResponse(apiKey: string | null): Response {
   return jsonResponse({
-    configured: Boolean(apiKey),
+    configured: Boolean(apiKey) && isTtsEnabled(),
     hasKey: Boolean(apiKey),
+    enabled: isTtsEnabled(),
     mode: "tts",
+    maxTextChars: MAX_TEXT_CHARS,
+    maxPlaysPerDay: MAX_PLAYS_PER_DAY,
     keyPrefix: apiKey ? safeKeyPrefix(apiKey) : null,
     defaultVoiceId: DEFAULT_VOICE_ID,
     defaultModel: DEFAULT_MODEL,
@@ -221,12 +316,37 @@ Deno.serve(async (req) => {
     return errorResponse("Method not allowed", 405, "method_not_allowed");
   }
 
+  if (!isTtsEnabled()) {
+    return errorResponse(
+      "Voice playback is temporarily unavailable. Text practice still works.",
+      503,
+      "tts_disabled",
+    );
+  }
+
   if (!apiKey) {
     console.error(JSON.stringify({
       event: "elevenlabs_tts_misconfigured",
       hasKey: false,
     }));
     return errorResponse("Server misconfiguration", 500, "server_misconfigured");
+  }
+
+  const userId = await resolveUserId(req);
+  if (!userId) {
+    return errorResponse("Sign in required for voice playback.", 401, "unauthorized");
+  }
+
+  const playCount = await getDailyPlayCount(userId);
+  if (playCount === null) {
+    return errorResponse("Voice playback is temporarily unavailable.", 503, "tts_quota_error");
+  }
+  if (playCount >= MAX_PLAYS_PER_DAY) {
+    return errorResponse(
+      "Daily voice playback limit reached. Text practice still works.",
+      429,
+      "tts_daily_limit",
+    );
   }
 
   let body: TtsRequest;
@@ -309,12 +429,16 @@ Deno.serve(async (req) => {
     const buffer = await res.arrayBuffer();
     const audioBase64 = bytesToBase64(new Uint8Array(buffer));
 
+    await incrementDailyPlayCount(userId);
+
     console.log(JSON.stringify({
       event: "elevenlabs_tts_success",
       providerStatus: 200,
       audioBytes: buffer.byteLength,
       voiceId,
       model,
+      userId,
+      dailyPlaysAfter: playCount + 1,
     }));
 
     return jsonResponse({

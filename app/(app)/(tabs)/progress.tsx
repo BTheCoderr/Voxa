@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { VoiceWaveDecoration } from '@/components/marketing/VoiceWaveDecoration';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -23,9 +22,6 @@ export default function ProgressScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}>
-        <VoxaText variant="caption" style={styles.overline}>
-          TestFlight beta
-        </VoxaText>
         <VoxaText variant="caption" style={styles.sub}>
           Momentum
         </VoxaText>
@@ -34,8 +30,6 @@ export default function ProgressScreen() {
         {!user ? (
           <VoxaText variant="muted">Sign in to sync XP and streaks across devices. Until then, progress stays on this device.</VoxaText>
         ) : null}
-        <BetaDisclaimer compact />
-
         <View style={styles.row}>
           <GlassPanel style={styles.tile}>
             <VoxaText variant="caption" style={styles.metricLabel}>

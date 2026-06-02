@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { router, useFocusEffect } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,6 +28,10 @@ function boolLabel(v: boolean): string {
 }
 
 export default function DebugHealthScreen() {
+  if (!__DEV__) {
+    return <Redirect href="/(app)/(tabs)/profile" />;
+  }
+
   const insets = useSafeAreaInsets();
   const { user, initialized, session } = useAuth();
   const [micStatus, setMicStatus] = useState<string>('…');
@@ -143,7 +147,7 @@ export default function DebugHealthScreen() {
           Diagnostics
         </VoxaText>
         <VoxaText variant="title">Health check</VoxaText>
-        <VoxaText variant="muted">For beta testers and builders. Not shown to end users in marketing.</VoxaText>
+        <VoxaText variant="muted">Development diagnostics only.</VoxaText>
 
         <GlassPanel style={styles.card}>
           <Row label="Supabase configured" value={boolLabel(env.supabaseConfigured)} />

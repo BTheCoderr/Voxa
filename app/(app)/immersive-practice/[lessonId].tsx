@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { VoxaOrb } from '@/components/onboarding/VoxaOrb';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
+import { showUnreleasedFeatures } from '@/lib/presentation/showUnreleasedFeatures';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { getLessonById } from '@/constants/lessonPaths';
@@ -49,8 +49,8 @@ export default function ImmersivePracticeScreen() {
 
   const onMicPress = useCallback(() => {
     Alert.alert(
-      'Live voice practice',
-      'Full speech-to-speech practice is coming soon. For now, use Type or start text practice from the lesson screen.',
+      'Text practice',
+      'Start text practice from the lesson screen for a full guided conversation with Voxa.',
       [{ text: 'OK' }],
     );
   }, []);
@@ -64,6 +64,10 @@ export default function ImmersivePracticeScreen() {
         </View>
       </LinearGradient>
     );
+  }
+
+  if (!showUnreleasedFeatures()) {
+    return <Redirect href={{ pathname: '/(app)/lesson/[lessonId]', params: { lessonId: lesson.id } }} />;
   }
 
   return (
@@ -88,7 +92,9 @@ export default function ImmersivePracticeScreen() {
               {lesson.title}
             </VoxaText>
             <VoxaText variant="muted" style={styles.sub}>
-              Immersive shell · live voice coming soon
+              {showUnreleasedFeatures()
+                ? 'Preview layout · use text practice for full sessions'
+                : 'Type to practice · start a full session from the lesson screen'}
             </VoxaText>
           </View>
 
@@ -105,8 +111,6 @@ export default function ImmersivePracticeScreen() {
               <VoxaButton title="Hide keyboard" variant="ghost" onPress={() => setShowType(false)} />
             </View>
           ) : null}
-
-          <BetaDisclaimer compact />
 
           <View style={styles.controls}>
             <CircleAction label="Inspire" icon="✨" onPress={inspire} />

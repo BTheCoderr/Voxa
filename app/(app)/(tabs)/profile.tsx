@@ -1,8 +1,7 @@
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { Alert, ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -28,9 +27,6 @@ export default function ProfileScreen() {
   return (
     <GradientBackground>
       <View style={[styles.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}>
-        <VoxaText variant="caption" style={styles.overline}>
-          TestFlight beta
-        </VoxaText>
         <VoxaText variant="caption" style={styles.sub}>
           Account
         </VoxaText>
@@ -38,21 +34,31 @@ export default function ProfileScreen() {
 
         <GlassPanel>
           <VoxaText variant="body">
-            {user ? `Signed in as ${user.email ?? user.id}` : 'You are practicing locally. Sign in to sync progress when you are ready.'}
+            {user
+              ? `Signed in as ${user.email ?? user.id}`
+              : 'Sign in to save progress and practice history across devices.'}
           </VoxaText>
 
           {!user ? (
             <VoxaButton title="Sign in" onPress={() => router.push('/(auth)/sign-in')} containerStyle={styles.cta} />
           ) : (
-            <VoxaButton
-              variant="ghost"
-              title="Sign out"
-              containerStyle={styles.cta}
-              onPress={async () => {
-                await signOut();
-                Alert.alert('Signed out', 'Your device session has been cleared.');
-              }}
-            />
+            <>
+              <VoxaButton
+                variant="ghost"
+                title="Sign out"
+                containerStyle={styles.cta}
+                onPress={async () => {
+                  await signOut();
+                  Alert.alert('Signed out', 'Your device session has been cleared.');
+                }}
+              />
+              <VoxaButton
+                variant="ghost"
+                title="Delete account"
+                onPress={() => router.push('/(app)/delete-account' as Href)}
+                containerStyle={styles.deleteCta}
+              />
+            </>
           )}
         </GlassPanel>
 
@@ -72,13 +78,13 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <BetaDisclaimer />
-
-        <Pressable onPress={() => router.push('/(app)/debug-health')} style={styles.debugHit}>
-          <VoxaText variant="caption" style={styles.debug}>
-            Diagnostics for testers
-          </VoxaText>
-        </Pressable>
+        {__DEV__ ? (
+          <Pressable onPress={() => router.push('/(app)/debug-health')} style={styles.debugHit}>
+            <VoxaText variant="caption" style={styles.debug}>
+              Diagnostics (development)
+            </VoxaText>
+          </Pressable>
+        ) : null}
       </View>
     </GradientBackground>
   );
@@ -95,14 +101,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  overline: {
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-    opacity: 0.85,
-  },
   sub: {
     letterSpacing: 1.6,
     textTransform: 'uppercase',
+    opacity: 0.85,
   },
   section: {
     marginTop: spacing.md,
@@ -116,6 +118,9 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.md,
+  },
+  deleteCta: {
+    marginTop: spacing.xs,
   },
   debugHit: {
     marginTop: 'auto',

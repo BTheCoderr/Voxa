@@ -12,7 +12,6 @@ import { trackEvent } from '@/lib/analytics/track';
 import { AuthProvider, useAuth } from '@/lib/auth/AuthContext';
 import { configureRevenueCat } from '@/lib/purchases/revenuecat';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -26,14 +25,10 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   return (
     <GradientBackground>
       <SafeAreaView style={styles.errSafe}>
-        <VoxaText variant="caption" style={styles.errBeta}>
-          Voxa · TestFlight beta
-        </VoxaText>
         <VoxaText variant="title">Something went wrong</VoxaText>
         <VoxaText variant="body" style={styles.errMsg}>
           {error.message}
         </VoxaText>
-        <BetaDisclaimer compact />
         <VoxaButton title="Try again" onPress={() => void retry()} containerStyle={styles.errBtn} />
       </SafeAreaView>
     </GradientBackground>
@@ -113,11 +108,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     justifyContent: 'center',
     gap: spacing.md,
-  },
-  errBeta: {
-    opacity: 0.8,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
   },
   errMsg: {
     opacity: 0.95,

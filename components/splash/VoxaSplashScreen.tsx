@@ -2,7 +2,6 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { VoiceWaveDecoration } from '@/components/marketing/VoiceWaveDecoration';
 import { VoxaOrb } from '@/components/onboarding/VoxaOrb';
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { palette, spacing } from '@/constants/theme';
@@ -33,7 +32,6 @@ export function VoxaSplashScreen({ slowLoad = false, message }: VoxaSplashScreen
           {loadingCopy}
         </VoxaText>
         {!slowLoad ? <ActivityIndicator size="large" color={palette.cyan} style={styles.spinner} /> : null}
-        <BetaDisclaimer compact />
       </View>
     </GradientBackground>
   );

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
@@ -17,6 +16,7 @@ import { openImmersivePractice, openLessonPractice } from '@/lib/lessons/openLes
 import { markLessonCompleted } from '@/lib/lessons/progress';
 import type { LaunchLanguage, ScenarioId } from '@/constants/scenarios';
 import type { LessonMode } from '@/lib/learning/types';
+import { showUnreleasedFeatures } from '@/lib/presentation/showUnreleasedFeatures';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import { fetchTtsAudio, getTtsUserErrorMessage, playBase64Audio } from '@/lib/tts/elevenLabsTts';
 
@@ -95,7 +95,6 @@ export default function LessonDetailScreen() {
         </VoxaText>
         <VoxaText variant="title">{lesson.title}</VoxaText>
         <VoxaText variant="body">{lesson.subtitle}</VoxaText>
-        <BetaDisclaimer compact />
 
         <View style={styles.tabs}>
           <TabButton label="Lecture" active={tab === 'lecture'} onPress={() => setTab('lecture')} />
@@ -136,7 +135,7 @@ export default function LessonDetailScreen() {
                 Practice this lesson in a guided conversation. Type your replies — voice playback stays manual.
               </VoxaText>
               <VoxaText variant="muted">
-                AI may be imperfect. This is a practice aid, not a certified language test.
+                Practice at your own pace. Use your judgment with AI suggestions.
               </VoxaText>
             </GlassPanel>
 
@@ -147,12 +146,14 @@ export default function LessonDetailScreen() {
               }}
             />
 
-            <VoxaButton
-              title="Immersive practice (visual)"
-              variant="ghost"
-              onPress={() => openImmersivePractice(lesson.id)}
-              containerStyle={styles.ghostCta}
-            />
+            {showUnreleasedFeatures() ? (
+              <VoxaButton
+                title="Immersive practice (preview)"
+                variant="ghost"
+                onPress={() => openImmersivePractice(lesson.id)}
+                containerStyle={styles.ghostCta}
+              />
+            ) : null}
 
             <VoxaButton
               title="Mark lesson complete"

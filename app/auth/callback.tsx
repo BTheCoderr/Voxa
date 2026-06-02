@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -162,7 +161,6 @@ export default function AuthCallbackScreen() {
           </View>
         ) : null}
 
-        <BetaDisclaimer compact />
       </View>
     </GradientBackground>
   );

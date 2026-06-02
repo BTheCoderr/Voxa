@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
@@ -80,7 +79,6 @@ export default function GoalsScreen() {
             router.push('/(onboarding)/microphone');
           }}
         />
-        <BetaDisclaimer compact />
       </ScrollView>
     </GradientBackground>
   );
