@@ -56,8 +56,7 @@ export default function ProgressScreen() {
           <GlassPanel style={styles.zeroWrap}>
             <VoiceWaveDecoration compact />
             <VoxaText variant="body" style={styles.zeroBody}>
-              Finish a voice session on the Practice tab to start earning XP and building your streak. Consistency matters
-              more than perfection.
+              Complete your first practice session to start building progress. Consistency matters more than perfection.
             </VoxaText>
           </GlassPanel>
         ) : null}

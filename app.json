@@ -18,7 +18,7 @@
       "bundleIdentifier": "com.baheemferrell.voxa",
       "buildNumber": "1",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Voxa needs microphone access to send your voice to your realtime AI practice session. Audio is used for speaking feedback only during a session you start.",
+        "NSMicrophoneUsageDescription": "Voxa uses the microphone only during an optional voice practice session you start, to give you speaking feedback. Audio is not recorded or used for anything else.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

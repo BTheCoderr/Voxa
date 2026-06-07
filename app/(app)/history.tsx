@@ -126,7 +126,7 @@ export default function HistoryScreen() {
         <VoxaText variant="title" style={styles.title}>
           Conversation history
         </VoxaText>
-        <VoxaText variant="body">Your recent voice sessions, newest first.</VoxaText>
+        <VoxaText variant="body">Your recent practice sessions, newest first.</VoxaText>
 
         {error ? (
           <GlassPanel style={styles.empty}>
@@ -150,7 +150,7 @@ export default function HistoryScreen() {
             !loading ? (
               <PolishedEmptyState
                 title="Your practice journal starts here"
-                body="After voice sessions, summaries and session notes appear in this list — newest first."
+                body="After practice sessions, summaries and session notes appear in this list — newest first."
                 footnote="Tip: finish one scenario on the Practice tab, then come back to see your first entry."
                 compact
               />
