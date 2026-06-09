@@ -149,7 +149,6 @@ function TextSessionActive({
       return true;
     } catch (e) {
       console.warn('createConversation', e);
-      Alert.alert('Could not start', 'We could not create your session record. Check your connection.');
       return false;
     }
   }, [userId, scenario, learningPath]);
@@ -195,7 +194,7 @@ function TextSessionActive({
     [userId],
   );
 
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(() => {
     setErrorMessage(null);
     setSessionSummary(null);
     setSessionStats(null);
@@ -216,25 +215,29 @@ function TextSessionActive({
       return;
     }
 
-    const ok = await ensureConversation();
-    if (!ok) return;
-
     const initialMessages: TextChatMessage[] = [];
+    let openerId: string | null = null;
     if (starter.firstAssistantMessage) {
-      const assistantId = nextId('assistant');
+      openerId = nextId('assistant');
       initialMessages.push({
-        id: assistantId,
+        id: openerId,
         role: 'assistant',
         text: starter.firstAssistantMessage,
       });
       setLatestAssistantText(starter.firstAssistantMessage);
-      void persistMessage('assistant', starter.firstAssistantMessage, assistantId);
     }
     setMessages(initialMessages);
 
     setSessionActive(true);
     setStartedAt(Date.now());
     trackEvent('text_session_started', { scenario_id: scenario.id });
+
+    void (async () => {
+      const ok = await ensureConversation();
+      if (ok && openerId && starter.firstAssistantMessage) {
+        void persistMessage('assistant', starter.firstAssistantMessage, openerId);
+      }
+    })();
   }, [ensureConversation, persistMessage, scenario.id, starter.firstAssistantMessage]);
 
   const sessionInitRef = useRef(false);
@@ -246,7 +249,7 @@ function TextSessionActive({
 
   const sendMessage = useCallback(async () => {
     const text = draft.trim();
-    if (!text || busy || !sessionActive) return;
+    if (!text || busy) return;
 
     setDraft('');
     setErrorMessage(null);
@@ -259,7 +262,11 @@ function TextSessionActive({
     const userMsg: TextChatMessage = { id: userIdMsg, role: 'user', text };
     const nextMessages = [...messages, userMsg];
     setMessages(nextMessages);
-    void persistMessage('user', text, userIdMsg);
+
+    void (async () => {
+      await ensureConversation();
+      void persistMessage('user', text, userIdMsg);
+    })();
 
     try {
       const result = await fetchChatCoachReply(
@@ -298,9 +305,9 @@ function TextSessionActive({
   }, [
     draft,
     busy,
-    sessionActive,
     messages,
     coachMessages,
+    ensureConversation,
     persistMessage,
     persistCorrection,
     scenario.id,
@@ -420,7 +427,7 @@ function TextSessionActive({
             styles.container,
             { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.md },
           ]}>
-          <TabletContent fullWidth style={styles.tablet}>
+          <TabletContent fullWidth fill style={styles.tablet}>
           <View style={styles.topBar}>
             <Pressable
               onPress={() => {
@@ -528,11 +535,11 @@ function TextSessionActive({
                     placeholderTextColor={palette.textMuted}
                     multiline
                     style={styles.input}
-                    editable={sessionActive && !busy}
+                    editable={!busy && !showRecap}
                   />
                   <VoxaButton
                     title="Send"
-                    disabled={!sessionActive || busy || !draft.trim()}
+                    disabled={busy || !draft.trim()}
                     onPress={() => void sendMessage()}
                     containerStyle={styles.sendBtn}
                   />
@@ -540,7 +547,7 @@ function TextSessionActive({
                 <VoxaButton
                   title="Finish session"
                   variant="ghost"
-                  disabled={!sessionActive}
+                  disabled={busy}
                   onPress={() => void endSession()}
                 />
               </View>

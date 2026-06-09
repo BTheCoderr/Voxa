@@ -7,17 +7,23 @@ type TabletContentProps = {
   style?: StyleProp<ViewStyle>;
   /** When true, inner column stretches to max width even on phone (useful for modals). */
   fullWidth?: boolean;
+  /**
+   * When true, the inner column flexes to fill the available height. Opt-in because
+   * most callers nest TabletContent inside a ScrollView, where a flex child collapses.
+   * Full-height screens (e.g. text practice) need this so children with flex work.
+   */
+  fill?: boolean;
 };
 
 /** Centers content and caps width on iPad so layouts do not stretch edge-to-edge. */
-export function TabletContent({ children, style, fullWidth = false }: TabletContentProps) {
+export function TabletContent({ children, style, fullWidth = false, fill = false }: TabletContentProps) {
   const { width } = useWindowDimensions();
   const isWide = width >= TABLET_MAX_CONTENT_WIDTH + 48;
   const maxWidth = fullWidth || isWide ? Math.min(TABLET_MAX_CONTENT_WIDTH, width - 32) : width;
 
   return (
-    <View style={[styles.outer, style]}>
-      <View style={[styles.inner, { maxWidth, width: '100%' }]}>{children}</View>
+    <View style={[styles.outer, fill && styles.fill, style]}>
+      <View style={[styles.inner, fill && styles.fill, { maxWidth, width: '100%' }]}>{children}</View>
     </View>
   );
 }
@@ -34,5 +40,9 @@ const styles = StyleSheet.create({
   },
   inner: {
     alignSelf: 'center',
+  },
+  fill: {
+    flex: 1,
+    minHeight: 0,
   },
 });
