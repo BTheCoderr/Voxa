@@ -20,7 +20,7 @@ import type { LearnerLevel, LearningLanguage } from '@/lib/learning/types';
 
 export default function LessonMapScreen() {
   const insets = useSafeAreaInsets();
-  const { progress } = useProgress();
+  const { progress, refresh: refreshProgress } = useProgress();
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<LearningLanguage>(DEFAULT_LAUNCH_LANGUAGE);
   const [level, setLevel] = useState<LearnerLevel>('beginner');
@@ -34,9 +34,10 @@ export default function LessonMapScreen() {
         setLanguage(profile.targetLanguage ?? DEFAULT_LAUNCH_LANGUAGE);
         setLevel(profile.level ?? 'beginner');
         setCompletedIds(completed);
+        void refreshProgress();
         setLoading(false);
       })();
-    }, []),
+    }, [refreshProgress]),
   );
 
   if (loading) {

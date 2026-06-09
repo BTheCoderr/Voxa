@@ -1,5 +1,7 @@
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { VoiceWaveDecoration } from '@/components/marketing/VoiceWaveDecoration';
@@ -13,7 +15,13 @@ import { useProgress } from '@/lib/progress/useProgress';
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { progress, progressHydrated } = useProgress();
+  const { progress, progressHydrated, refresh } = useProgress();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
 
   if (!progressHydrated) {
     return <ScreenLoading message="Loading progress…" />;

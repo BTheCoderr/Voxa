@@ -125,6 +125,66 @@ const STARTER_OVERRIDES: Partial<Record<`${ScenarioId}:${LaunchLanguage}`, Parti
     firstAssistantMessage: '感谢参加。能简单说一下今天想讨论的内容吗？',
     suggestedUserReply: '谢谢。我打电话是想了解…',
   },
+  'business_meeting:spanish': {
+    starterTitle: 'Únete a la reunión',
+    starterPrompt: 'Comparte tu opinión o haz una pregunta para aclarar.',
+    firstAssistantMessage: 'Gracias a todos por venir. Empecemos con una ronda rápida de novedades.',
+    suggestedUserReply: 'Por mi parte, la prioridad principal de esta semana es…',
+  },
+  'business_meeting:mandarin': {
+    starterTitle: '加入会议',
+    starterPrompt: '分享你的看法或提出一个澄清的问题。',
+    firstAssistantMessage: '感谢大家参加。我们先简单地轮流汇报一下最新进展吧。',
+    suggestedUserReply: '我这边本周的主要重点是… (wǒ zhè biān běn zhōu de zhǔyào zhòngdiǎn shì…)',
+  },
+  'airport:spanish': {
+    starterTitle: 'En el aeropuerto',
+    starterPrompt: 'Pide ayuda o confirma los datos de tu viaje.',
+    firstAssistantMessage: 'Hola, ¿en qué puedo ayudarle hoy?',
+    suggestedUserReply: 'Hola, tengo una reserva a nombre de… ¿Podría ayudarme a facturar?',
+  },
+  'airport:mandarin': {
+    starterTitle: '在机场',
+    starterPrompt: '寻求帮助或确认你的出行信息。',
+    firstAssistantMessage: '您好，今天有什么可以帮您的吗？',
+    suggestedUserReply: '您好，我有一个预订，名字是… 能帮我办理登机吗？(néng bāng wǒ bànlǐ dēngjī ma?)',
+  },
+  'restaurant:spanish': {
+    starterTitle: 'En el restaurante',
+    starterPrompt: 'Saluda al camarero y pide con amabilidad.',
+    firstAssistantMessage: '¡Buenas noches! ¿Ya están listos para pedir o necesitan unos minutos más?',
+    suggestedUserReply: 'Creo que estamos listos. ¿Me podría traer…?',
+  },
+  'restaurant:mandarin': {
+    starterTitle: '在餐厅',
+    starterPrompt: '问候服务员并礼貌地点餐。',
+    firstAssistantMessage: '晚上好！您们准备好点菜了吗，还是需要再看几分钟？',
+    suggestedUserReply: '我们准备好了。请给我… (qǐng gěi wǒ…)',
+  },
+  'travel:spanish': {
+    starterTitle: 'En el viaje',
+    starterPrompt: 'Pide indicaciones o confirma tu reserva.',
+    firstAssistantMessage: 'Hola, ¿necesita ayuda para encontrar algo?',
+    suggestedUserReply: 'Sí, ¿me podría decir cómo llegar a…?',
+  },
+  'travel:mandarin': {
+    starterTitle: '在旅途中',
+    starterPrompt: '询问方向或确认你的预订。',
+    firstAssistantMessage: '你好，需要帮忙找什么地方吗？',
+    suggestedUserReply: '是的，请问怎么去…？(qǐng wèn zěnme qù…?)',
+  },
+  'dating:spanish': {
+    starterTitle: 'Conócete con alguien',
+    starterPrompt: 'Empieza con un saludo amable y una pregunta sencilla.',
+    firstAssistantMessage: '¡Hola! Qué bueno conocerte. ¿Cómo va tu día?',
+    suggestedUserReply: '¡Hola! Igualmente, encantado/a. Mi día va muy bien, gracias. ¿Y el tuyo?',
+  },
+  'dating:mandarin': {
+    starterTitle: '认识新朋友',
+    starterPrompt: '用友好的问候和一个简单的问题开场。',
+    firstAssistantMessage: '你好！很高兴认识你。今天过得怎么样？',
+    suggestedUserReply: '你好！我也很高兴认识你。我今天过得很好，谢谢。你呢？(nǐ ne?)',
+  },
 };
 
 export function getScenarioStarter(scenarioId: ScenarioId, language: LaunchLanguage): ScenarioStarter {

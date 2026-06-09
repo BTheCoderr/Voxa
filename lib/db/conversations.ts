@@ -140,6 +140,7 @@ export async function getConversationHistory(
     .from('conversations')
     .select('id, scenario_id, scenario_title, status, summary, started_at, ended_at, xp_awarded')
     .eq('user_id', userId)
+    .eq('status', 'completed')
     .order('started_at', { ascending: false })
     .limit(limit);
 
