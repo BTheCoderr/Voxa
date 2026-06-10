@@ -18,7 +18,13 @@ import type { LaunchLanguage, ScenarioId } from '@/constants/scenarios';
 import type { LessonMode } from '@/lib/learning/types';
 import { showUnreleasedFeatures } from '@/lib/presentation/showUnreleasedFeatures';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
-import { fetchTtsAudio, getTtsUserErrorMessage, playBase64Audio } from '@/lib/tts/elevenLabsTts';
+import {
+  fetchTtsAudio,
+  getTtsUserErrorMessage,
+  playBase64Audio,
+  TTS_UNAVAILABLE_USER_MESSAGE,
+} from '@/lib/tts/elevenLabsTts';
+import { useTtsAvailability } from '@/lib/tts/useTtsAvailability';
 
 export default function LessonDetailScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
@@ -28,6 +34,7 @@ export default function LessonDetailScreen() {
   const [language, setLanguage] = useState<LaunchLanguage>('english_business');
   const [ttsBusyId, setTtsBusyId] = useState<string | null>(null);
   const [ttsError, setTtsError] = useState<string | null>(null);
+  const ttsAvailable = useTtsAvailability(session?.access_token);
 
   const lesson = useMemo(() => (lessonId ? getLessonById(lessonId) : undefined), [lessonId]);
 
@@ -41,7 +48,10 @@ export default function LessonDetailScreen() {
     async (bubbleId: string, text: string) => {
       if (!lesson) return;
       if (!env.elevenLabsTtsConfigured || !session?.access_token) {
-        setTtsError('Sign in to hear voice playback.');
+        setTtsError('Please sign in again.');
+        return;
+      }
+      if (ttsAvailable !== true) {
         return;
       }
       setTtsBusyId(bubbleId);
@@ -62,7 +72,7 @@ export default function LessonDetailScreen() {
         setTtsBusyId(null);
       }
     },
-    [session?.access_token, lesson, language],
+    [session?.access_token, lesson, language, ttsAvailable],
   );
 
   if (!lesson) {
@@ -106,18 +116,20 @@ export default function LessonDetailScreen() {
             {lesson.lecture.map((bubble) => (
               <GlassPanel key={bubble.id} style={styles.lectureBubble}>
                 <VoxaText variant="body">{bubble.text}</VoxaText>
-                <Pressable
-                  onPress={() => void playBubble(bubble.id, bubble.text)}
-                  disabled={ttsBusyId === bubble.id}
-                  style={styles.hearBtn}>
-                  {ttsBusyId === bubble.id ? (
-                    <ActivityIndicator size="small" color={palette.cyan} />
-                  ) : (
-                    <VoxaText variant="caption" style={styles.hearText}>
-                      Hear this · manual playback
-                    </VoxaText>
-                  )}
-                </Pressable>
+                {ttsAvailable === true ? (
+                  <Pressable
+                    onPress={() => void playBubble(bubble.id, bubble.text)}
+                    disabled={ttsBusyId === bubble.id}
+                    style={styles.hearBtn}>
+                    {ttsBusyId === bubble.id ? (
+                      <ActivityIndicator size="small" color={palette.cyan} />
+                    ) : (
+                      <VoxaText variant="caption" style={styles.hearText}>
+                        Hear this · manual playback
+                      </VoxaText>
+                    )}
+                  </Pressable>
+                ) : null}
               </GlassPanel>
             ))}
             {ttsError ? (

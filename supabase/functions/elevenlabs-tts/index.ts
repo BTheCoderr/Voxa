@@ -22,6 +22,9 @@ const DEFAULT_MODEL = "eleven_flash_v2_5";
 /** Sarah — premade voice available on free-tier API (Rachel requires paid plan). */
 const DEFAULT_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 const ELEVENLABS_TTS_BASE = "https://api.elevenlabs.io/v1/text-to-speech";
+const ELEVENLABS_USER_URL = "https://api.elevenlabs.io/v1/user";
+const TTS_UNAVAILABLE_USER_MESSAGE =
+  "Voice playback is temporarily unavailable. You can continue practicing by text.";
 
 const LEARNING_PATHS = new Set(["business_english", "spanish", "mandarin"]);
 
@@ -283,11 +286,29 @@ async function callElevenLabsTts(
   });
 }
 
-function healthResponse(apiKey: string | null): Response {
+async function validateProviderKey(apiKey: string): Promise<boolean> {
+  try {
+    const res = await fetch(ELEVENLABS_USER_URL, {
+      headers: { "xi-api-key": apiKey },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function healthResponse(apiKey: string | null): Promise<Response> {
+  const enabled = isTtsEnabled();
+  const hasKey = Boolean(apiKey);
+  const providerReady = apiKey ? await validateProviderKey(apiKey) : false;
+  const available = hasKey && enabled && providerReady;
+
   return jsonResponse({
-    configured: Boolean(apiKey) && isTtsEnabled(),
-    hasKey: Boolean(apiKey),
-    enabled: isTtsEnabled(),
+    configured: available,
+    available,
+    providerReady,
+    hasKey,
+    enabled,
     mode: "tts",
     maxTextChars: MAX_TEXT_CHARS,
     maxPlaysPerDay: MAX_PLAYS_PER_DAY,
@@ -307,7 +328,7 @@ Deno.serve(async (req) => {
   if (req.method === "GET") {
     const url = new URL(req.url);
     if (url.searchParams.get("health") === "1" || url.pathname.endsWith("/health")) {
-      return healthResponse(apiKey);
+      return await healthResponse(apiKey);
     }
     return errorResponse("Use POST for TTS or GET ?health=1", 405, "method_not_allowed");
   }
@@ -317,11 +338,7 @@ Deno.serve(async (req) => {
   }
 
   if (!isTtsEnabled()) {
-    return errorResponse(
-      "Voice playback is temporarily unavailable. Text practice still works.",
-      503,
-      "tts_disabled",
-    );
+    return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 503, "tts_disabled");
   }
 
   if (!apiKey) {
@@ -329,7 +346,7 @@ Deno.serve(async (req) => {
       event: "elevenlabs_tts_misconfigured",
       hasKey: false,
     }));
-    return errorResponse("Server misconfiguration", 500, "server_misconfigured");
+    return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 503, "server_misconfigured");
   }
 
   const userId = await resolveUserId(req);
@@ -339,11 +356,11 @@ Deno.serve(async (req) => {
 
   const playCount = await getDailyPlayCount(userId);
   if (playCount === null) {
-    return errorResponse("Voice playback is temporarily unavailable.", 503, "tts_quota_error");
+    return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 503, "tts_quota_error");
   }
   if (playCount >= MAX_PLAYS_PER_DAY) {
     return errorResponse(
-      "Daily voice playback limit reached. Text practice still works.",
+      "Daily voice playback limit reached. You can continue practicing by text.",
       429,
       "tts_daily_limit",
     );
@@ -392,11 +409,7 @@ Deno.serve(async (req) => {
       }));
 
       if (providerErr.status === 401 || providerErr.status === 403) {
-        return errorResponse(
-          "Voice key is not configured correctly.",
-          502,
-          "tts_provider_auth",
-        );
+        return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 502, "tts_provider_auth");
       }
 
       if (
@@ -404,26 +417,14 @@ Deno.serve(async (req) => {
         providerErr.providerCode === "paid_plan_required" ||
         providerErr.providerCode === "payment_required"
       ) {
-        return errorResponse(
-          "Voice playback is temporarily unavailable.",
-          402,
-          "tts_provider_quota",
-        );
+        return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 402, "tts_provider_quota");
       }
 
       if (providerErr.status === 429) {
-        return errorResponse(
-          "Voice playback is temporarily rate-limited. Try again shortly.",
-          429,
-          "tts_rate_limited",
-        );
+        return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 429, "tts_rate_limited");
       }
 
-      return errorResponse(
-        "Voice playback is temporarily unavailable.",
-        502,
-        "tts_provider_error",
-      );
+      return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 502, "tts_provider_error");
     }
 
     const buffer = await res.arrayBuffer();
@@ -456,6 +457,6 @@ Deno.serve(async (req) => {
       keyPrefix: safeKeyPrefix(apiKey),
       errorName: e instanceof Error ? e.name : "unknown",
     }));
-    return errorResponse("Voice playback failed.", 502, "tts_error");
+    return errorResponse(TTS_UNAVAILABLE_USER_MESSAGE, 502, "tts_error");
   }
 });

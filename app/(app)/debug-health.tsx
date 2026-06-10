@@ -20,6 +20,7 @@ import {
   fetchTtsTestAudio,
   fetchTtsHealth,
   getTtsUserErrorMessage,
+  isTtsPlaybackAvailable,
   playBase64Audio,
 } from '@/lib/tts/elevenLabsTts';
 
@@ -68,7 +69,9 @@ export default function DebugHealthScreen() {
         setTtsHealth('Could not reach TTS health endpoint');
       } else {
         const parts = [
+          `available: ${isTtsPlaybackAvailable(health)}`,
           `hasKey: ${health.hasKey}`,
+          health.providerReady != null ? `providerReady: ${health.providerReady}` : null,
           health.keyPrefix ? `prefix: ${health.keyPrefix}` : null,
           health.defaultModel ? `model: ${health.defaultModel}` : null,
         ].filter(Boolean);

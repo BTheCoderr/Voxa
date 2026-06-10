@@ -47,7 +47,13 @@ import { getScenarioStarter } from '@/lib/practice/scenarioStarter';
 import { fromApiLearningPath, toApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 import { supabase } from '@/lib/supabase/client';
-import { fetchTtsAudio, getTtsUserErrorMessage, playBase64Audio } from '@/lib/tts/elevenLabsTts';
+import {
+  fetchTtsAudio,
+  getTtsUserErrorMessage,
+  playBase64Audio,
+  TTS_UNAVAILABLE_USER_MESSAGE,
+} from '@/lib/tts/elevenLabsTts';
+import { useTtsAvailability } from '@/lib/tts/useTtsAvailability';
 
 const XP_FOR_SESSION = 20;
 const USER_LEVEL: UserLevel = 'intermediate';
@@ -98,6 +104,7 @@ function TextSessionActive({
   const [latestAssistantText, setLatestAssistantText] = useState('');
   const [ttsBusy, setTtsBusy] = useState(false);
   const [ttsError, setTtsError] = useState<string | null>(null);
+  const ttsAvailable = useTtsAvailability(accessToken);
   const [busy, setBusy] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -318,8 +325,7 @@ function TextSessionActive({
   const playAssistantVoice = useCallback(async () => {
     if (!latestAssistantText.trim() || ttsBusy) return;
 
-    if (!env.elevenLabsTtsConfigured) {
-      setTtsError('Voice playback is not set up yet.');
+    if (!env.elevenLabsTtsConfigured || ttsAvailable !== true) {
       return;
     }
 
@@ -342,7 +348,7 @@ function TextSessionActive({
     } finally {
       setTtsBusy(false);
     }
-  }, [latestAssistantText, ttsBusy, scenario.id, learningPath, accessToken]);
+  }, [latestAssistantText, ttsBusy, ttsAvailable, scenario.id, learningPath, accessToken]);
 
   useEffect(() => {
     scrollTranscriptToEnd();
@@ -488,10 +494,11 @@ function TextSessionActive({
                       <ScenarioStarterCard
                         starter={starter}
                         onUseSuggestedReply={(text) => setDraft(text)}
+                        showVoiceHint={ttsAvailable === true}
                       />
                     ) : null}
                     <TextCorrectionCards items={latestCorrections} encouragement={latestEncouragement} />
-                    {latestAssistantText && !busy ? (
+                    {latestAssistantText && !busy && ttsAvailable === true ? (
                       <View style={styles.voiceRow}>
                         <VoxaButton
                           title={ttsBusy ? 'Loading…' : 'Hear this response'}

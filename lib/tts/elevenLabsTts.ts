@@ -5,6 +5,9 @@ import type { ApiLearningPath } from '@/lib/realtime/learningPath';
 import { supabase } from '@/lib/supabase/client';
 import { resolveVoiceId, textForTts, VOXA_VOICE_TEST_SENTENCE } from '@/lib/tts/voices';
 
+export const TTS_UNAVAILABLE_USER_MESSAGE =
+  'Voice playback is temporarily unavailable. You can continue practicing by text.';
+
 export type TtsResponse = {
   audioBase64: string;
   contentType: string;
@@ -13,6 +16,9 @@ export type TtsResponse = {
 export type TtsHealthStatus = {
   configured: boolean;
   hasKey: boolean;
+  enabled?: boolean;
+  available?: boolean;
+  providerReady?: boolean;
   mode: string;
   keyPrefix?: string | null;
   defaultVoiceId?: string;
@@ -21,33 +27,48 @@ export type TtsHealthStatus = {
 
 type ErrorBody = { error?: string; code?: string; message?: string };
 
-/** User-facing TTS error copy — maps thrown errors without exposing keys. */
+const TTS_PROVIDER_UNAVAILABLE_CODES = new Set([
+  'tts_provider_auth',
+  'tts_provider_quota',
+  'tts_provider_error',
+  'tts_error',
+  'tts_rate_limited',
+  'tts_disabled',
+  'tts_quota_error',
+  'server_misconfigured',
+]);
+
+/** Whether the TTS health endpoint reports playback is ready. */
+export function isTtsPlaybackAvailable(health: TtsHealthStatus | null | undefined): boolean {
+  if (!health) return false;
+  if (typeof health.available === 'boolean') return health.available;
+  if (typeof health.providerReady === 'boolean') {
+    return health.providerReady && health.hasKey && health.enabled !== false;
+  }
+  return Boolean(health.configured && health.hasKey && health.enabled !== false);
+}
+
+/** User-facing TTS error copy — never exposes provider or config details. */
 export function getTtsUserErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
 
   if (raw.includes('not set up')) {
-    return 'Voice playback is not set up yet.';
-  }
-  if (raw.includes('Voice key is not configured correctly')) {
-    return 'Voice key is not configured correctly.';
+    return TTS_UNAVAILABLE_USER_MESSAGE;
   }
   if (raw.includes('Daily voice playback limit reached')) {
-    return 'Daily voice playback limit reached. Text practice still works.';
+    return 'Daily voice playback limit reached. You can continue practicing by text.';
   }
-  if (raw.includes('Text practice still works')) {
-    return raw;
-  }
-  if (
-    raw.includes('ElevenLabs credits') ||
-    raw.includes('paid plan') ||
-    raw.includes('tts_provider_quota')
-  ) {
-    return 'Voice playback is temporarily unavailable. Text practice still works.';
-  }
-  if (raw.includes('sign in again')) {
+  if (raw.includes('sign in again') || raw.includes('Sign in')) {
     return 'Please sign in again.';
   }
-  return 'Could not play voice right now.';
+  if (
+    raw.includes(TTS_UNAVAILABLE_USER_MESSAGE) ||
+    raw.includes('temporarily unavailable') ||
+    raw.includes('Could not play voice')
+  ) {
+    return TTS_UNAVAILABLE_USER_MESSAGE;
+  }
+  return TTS_UNAVAILABLE_USER_MESSAGE;
 }
 
 function buildAuthHeaders(accessToken: string): Record<string, string> {
@@ -55,6 +76,18 @@ function buildAuthHeaders(accessToken: string): Record<string, string> {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${accessToken}`,
   };
+  if (env.supabaseAnonKey) {
+    headers.apikey = env.supabaseAnonKey;
+  }
+  return headers;
+}
+
+function buildHealthHeaders(authToken?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = authToken?.trim() || env.supabaseAnonKey;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   if (env.supabaseAnonKey) {
     headers.apikey = env.supabaseAnonKey;
   }
@@ -69,47 +102,26 @@ async function resolveAccessToken(fallbackToken?: string): Promise<string> {
   return fallbackToken?.trim() ?? '';
 }
 
-function throwTtsHttpError(res: Response, json: ErrorBody | undefined, raw: string): never {
+function throwTtsHttpError(res: Response, json: ErrorBody | undefined): never {
   const code = typeof json?.code === 'string' ? json.code : undefined;
 
-  if (code === 'tts_provider_auth') {
-    throw new Error('Voice key is not configured correctly.');
-  }
-
-  if (code === 'tts_provider_quota') {
-    throw new Error('Voice playback is temporarily unavailable. Text practice still works.');
-  }
-
   if (code === 'tts_daily_limit') {
-    throw new Error('Daily voice playback limit reached. Text practice still works.');
+    throw new Error('Daily voice playback limit reached. You can continue practicing by text.');
   }
 
-  if (code === 'tts_disabled') {
-    throw new Error('Voice playback is temporarily unavailable. Text practice still works.');
+  if (code === 'unauthorized') {
+    throw new Error('Please sign in again.');
+  }
+
+  if (code && TTS_PROVIDER_UNAVAILABLE_CODES.has(code)) {
+    throw new Error(TTS_UNAVAILABLE_USER_MESSAGE);
   }
 
   if (res.status === 401 || res.status === 403) {
     throw new Error('Please sign in again.');
   }
 
-  if (code === 'tts_provider_error' || code === 'tts_error' || code === 'tts_rate_limited') {
-    throw new Error('Could not play voice right now.');
-  }
-
-  const serverMsg = typeof json?.error === 'string' ? json.error : undefined;
-  if (serverMsg?.includes('Voice key is not configured correctly')) {
-    throw new Error('Voice key is not configured correctly.');
-  }
-  if (serverMsg) {
-    throw new Error('Could not play voice right now.');
-  }
-
-  const gatewayMsg = typeof json?.message === 'string' ? json.message : undefined;
-  if (gatewayMsg && (res.status === 401 || res.status === 403)) {
-    throw new Error('Please sign in again.');
-  }
-
-  throw new Error('Could not play voice right now.');
+  throw new Error(TTS_UNAVAILABLE_USER_MESSAGE);
 }
 
 /** GET elevenlabs-tts?health=1 — safe TTS status (no full keys). */
@@ -117,16 +129,9 @@ export async function fetchTtsHealth(authToken?: string): Promise<TtsHealthStatu
   if (!env.elevenLabsTtsUrl) return null;
 
   const url = `${env.elevenLabsTtsUrl}${env.elevenLabsTtsUrl.includes('?') ? '&' : '?'}health=1`;
-  const headers: Record<string, string> = {};
-  if (authToken?.trim()) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
-  if (env.supabaseAnonKey) {
-    headers.apikey = env.supabaseAnonKey;
-  }
 
   try {
-    const res = await fetch(url, { method: 'GET', headers });
+    const res = await fetch(url, { method: 'GET', headers: buildHealthHeaders(authToken) });
     if (!res.ok) return null;
     return (await res.json()) as TtsHealthStatus;
   } catch {
@@ -176,14 +181,14 @@ export async function fetchTtsAudio(
   }
 
   if (!res.ok) {
-    throwTtsHttpError(res, json, raw);
+    throwTtsHttpError(res, json);
   }
 
   const body = json as Record<string, unknown> | undefined;
   const audioBase64 = body?.audioBase64;
   const contentType = body?.contentType;
   if (typeof audioBase64 !== 'string' || !audioBase64) {
-    throw new Error('Voice response missing audio.');
+    throw new Error(TTS_UNAVAILABLE_USER_MESSAGE);
   }
 
   return {

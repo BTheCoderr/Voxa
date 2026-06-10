@@ -8,9 +8,15 @@ import { palette, radii, spacing } from '@/constants/theme';
 type ScenarioStarterCardProps = {
   starter: ScenarioStarter;
   onUseSuggestedReply?: (text: string) => void;
+  /** When false, hides the optional voice-playback hint (TTS unavailable in production). */
+  showVoiceHint?: boolean;
 };
 
-export function ScenarioStarterCard({ starter, onUseSuggestedReply }: ScenarioStarterCardProps) {
+export function ScenarioStarterCard({
+  starter,
+  onUseSuggestedReply,
+  showVoiceHint = true,
+}: ScenarioStarterCardProps) {
   return (
     <GlassPanel style={styles.card}>
       <VoxaText variant="caption" style={styles.label}>
@@ -30,9 +36,11 @@ export function ScenarioStarterCard({ starter, onUseSuggestedReply }: ScenarioSt
           </VoxaText>
         </Pressable>
       ) : null}
-      <VoxaText variant="caption" style={styles.hint}>
-        Tap Hear this response to listen to the latest reply.
-      </VoxaText>
+      {showVoiceHint ? (
+        <VoxaText variant="caption" style={styles.hint}>
+          Tap Hear this response to listen to the latest reply.
+        </VoxaText>
+      ) : null}
     </GlassPanel>
   );
 }
