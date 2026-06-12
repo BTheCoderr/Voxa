@@ -48,7 +48,6 @@
       "expo-router",
       "expo-secure-store",
       "expo-audio",
-      "@edkimmel/expo-audio-stream/app.plugin.js",
       "expo-asset"
     ],
     "experiments": {
