@@ -1,3 +1,4 @@
+import type { CoachSkillTag } from '@/lib/progress/coachSkills';
 import type { ApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 
@@ -15,7 +16,9 @@ export type ChatCoachCorrection = {
 export type SessionCoachReview = {
   headline: string;
   strength: string;
+  strengthTag: CoachSkillTag;
   focus: string;
+  focusTag: CoachSkillTag;
   nextMission: string;
   suggestedScenarioId: string;
 };
