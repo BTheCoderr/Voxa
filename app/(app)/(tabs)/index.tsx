@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
 import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
 import { DailyCoachCard } from '@/components/practice/DailyCoachCard';
+import { PracticeLevelPicker } from '@/components/practice/PracticeLevelPicker';
 import { WeeklyCoachPlanCard } from '@/components/progress/WeeklyCoachPlanCard';
 import { LanguagePathPicker } from '@/components/practice/LanguagePathPicker';
 import { PracticeModeFraming } from '@/components/practice/PracticeModeFraming';
@@ -24,7 +25,12 @@ import { getRecentReviewedConversations } from '@/lib/db/conversations';
 import { isTextPracticeMode, isVoicePracticeMode } from '@/lib/ai/mode';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import { isScreenshotMode } from '@/lib/presentation/screenshotMode';
-import { getPreferredLanguage, setPreferredLanguage } from '@/lib/preferences/storage';
+import {
+  getPreferredLanguage,
+  getPreferredLevel,
+  setPreferredLanguage,
+  setPreferredLevel,
+} from '@/lib/preferences/storage';
 import {
   buildMissionFromCoachMemory,
   loadPersonalizedMission,
@@ -32,6 +38,7 @@ import {
 } from '@/lib/practice/coachPlan';
 import { getDailyMission, wasActiveToday } from '@/lib/practice/dailyMission';
 import { buildLearnerCoachMemory } from '@/lib/progress/coachMemory';
+import { practiceLevelLabel } from '@/lib/progress/adaptiveDifficulty';
 import { getCoachLevel } from '@/lib/progress/levels';
 import {
   loadWeeklyCoachPlan,
@@ -41,6 +48,7 @@ import {
 import { useProgress } from '@/lib/progress/useProgress';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import { supabase } from '@/lib/supabase/client';
+import type { UserLevel } from '@/lib/realtime/types';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function PracticeHomeScreen() {
@@ -48,6 +56,7 @@ export default function PracticeHomeScreen() {
   const [language, setLanguage] = useState<LaunchLanguage | null | undefined>(undefined);
   const [personalizedMission, setPersonalizedMission] = useState<PersonalizedMission | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyCoachPlan | null>(null);
+  const [practiceLevel, setPracticeLevel] = useState<UserLevel>('intermediate');
   const { user } = useAuth();
   const { progress, progressHydrated, refresh } = useProgress();
 
@@ -59,6 +68,7 @@ export default function PracticeHomeScreen() {
           loadPersonalizedMission(),
         ]);
         const selectedLanguage = stored ?? DEFAULT_LAUNCH_LANGUAGE;
+        const selectedLevel = await getPreferredLevel(selectedLanguage);
         let resolvedPlan = localPlan;
 
         if (user) {
@@ -90,6 +100,7 @@ export default function PracticeHomeScreen() {
         }
 
         setLanguage(selectedLanguage);
+        setPracticeLevel(selectedLevel);
         setPersonalizedMission(resolvedPlan);
         await refresh();
       })();
@@ -98,6 +109,8 @@ export default function PracticeHomeScreen() {
 
   const onLanguageChange = useCallback(async (lang: LaunchLanguage) => {
     setLanguage(lang);
+    const nextLevel = await getPreferredLevel(lang);
+    setPracticeLevel(nextLevel);
     await setPreferredLanguage(lang);
     trackEvent('learning_path_selected', { language: lang });
 
@@ -193,7 +206,7 @@ export default function PracticeHomeScreen() {
           <GlassPanel style={styles.momentumStrip}>
             <View style={styles.momentumRow}>
               <View style={styles.momentumMetric}>
-                <VoxaText variant="caption">Level</VoxaText>
+                <VoxaText variant="caption">Coach stage</VoxaText>
                 <VoxaText variant="lead" style={styles.metricValue}>
                   {level.current.name}
                 </VoxaText>
@@ -237,6 +250,7 @@ export default function PracticeHomeScreen() {
             <WeeklyCoachPlanCard
               plan={weeklyPlan}
               languageLabel={launchLanguageLabel(effectiveLanguage)}
+              levelLabel={practiceLevelLabel(practiceLevel)}
               onStart={(item: WeeklyCoachPlanItem) => {
                 trackEvent('weekly_coach_plan_started', {
                   scenario_id: item.scenarioId,
@@ -263,6 +277,30 @@ export default function PracticeHomeScreen() {
         </View>
 
         <LanguagePathPicker value={effectiveLanguage} onChange={(lang) => void onLanguageChange(lang)} />
+
+        <View style={styles.difficultyBlock}>
+          <View style={styles.difficultyHeader}>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Practice difficulty
+            </VoxaText>
+            <VoxaText variant="caption" style={styles.modeLabel}>
+              {practiceLevelLabel(practiceLevel)}
+            </VoxaText>
+          </View>
+          <PracticeLevelPicker
+            value={practiceLevel}
+            onChange={(nextLevel) => {
+              setPracticeLevel(nextLevel);
+              void setPreferredLevel(effectiveLanguage, nextLevel);
+              trackEvent('practice_level_selected', {
+                learning_path: effectiveLanguage,
+                level: nextLevel,
+                source: 'practice_home',
+              });
+            }}
+            showDescriptions
+          />
+        </View>
 
         {!isScreenshotMode() && !isVoicePracticeMode() ? <PracticeModeFraming /> : null}
         {isScreenshotMode() ? <ScreenshotMarketingBanner /> : null}
@@ -377,6 +415,16 @@ const styles = StyleSheet.create({
   },
   weeklyPlanWrap: {
     marginTop: spacing.xxl,
+  },
+  difficultyBlock: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  difficultyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   sectionHeader: {
     marginTop: spacing.xxl,
