@@ -134,7 +134,7 @@ Use a **physical iPhone** with an **EAS development, preview, or production buil
 - [ ] Privacy screen accurately matches current data/audio behavior.
 - [ ] Terms screen is reviewed for the intended release.
 - [ ] App Store Privacy Policy URL and Support URL are public HTTPS URLs.
-- [ ] Remove any remaining placeholder/beta-only legal copy before the next public App Store update.
+- [ ] Review all in-app legal copy against the public policies before the next public App Store update.
 - [ ] App Store screenshots and metadata match the actual current product.
 
 ## Exit criteria
