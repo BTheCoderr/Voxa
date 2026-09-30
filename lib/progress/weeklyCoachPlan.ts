@@ -97,11 +97,18 @@ function firstUniqueScenario(
 
 function activeCorrectionPattern(
   mastery: CorrectionMasterySummary,
+  used: Set<ScenarioId>,
 ): CorrectionMasteryPattern | null {
   return (
-    mastery.patterns.find((pattern) => pattern.status === 'recurring') ??
-    mastery.patterns.find((pattern) => pattern.status === 'new') ??
-    mastery.patterns.find((pattern) => pattern.status === 'improving') ??
+    mastery.patterns.find(
+      (pattern) => pattern.status === 'recurring' && !used.has(pattern.scenarioId),
+    ) ??
+    mastery.patterns.find(
+      (pattern) => pattern.status === 'new' && !used.has(pattern.scenarioId),
+    ) ??
+    mastery.patterns.find(
+      (pattern) => pattern.status === 'improving' && !used.has(pattern.scenarioId),
+    ) ??
     null
   );
 }
@@ -196,16 +203,17 @@ export function buildWeeklyCoachPlan(args: {
       memory.primaryFocus ? 'coach_memory' : 'foundation',
       primaryScenarioId,
       primaryLabel,
-      memory.latestReview?.nextMission ??
-        `Use this session to make ${primaryLabel.toLowerCase()} feel more automatic.`,
+      memory.latestReview?.suggestedScenarioId === primaryScenarioId
+        ? memory.latestReview.nextMission
+        : `Use this session to make ${primaryLabel.toLowerCase()} feel more automatic.`,
       memory.primaryFocus
         ? `${primaryLabel} was the strongest repeated coaching focus before this week began.`
         : 'Voxa needs more coached history, so this week starts with a balanced foundation session.',
     );
   }
 
-  const correction = activeCorrectionPattern(mastery);
-  if (correction && !used.has(correction.scenarioId)) {
+  const correction = activeCorrectionPattern(mastery, used);
+  if (correction) {
     addItem(
       'correction_mastery',
       correction.scenarioId,
