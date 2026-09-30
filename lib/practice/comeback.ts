@@ -4,6 +4,7 @@ import type { ScenarioId } from '@/constants/scenarios';
 import type { WeeklyCoachPlan, WeeklyCoachPlanItem } from '@/lib/progress/weeklyCoachPlan';
 
 const DISMISS_KEY = '@voxa/retention/v1/dismissed';
+const ENABLED_KEY = '@voxa/retention/v1/enabled';
 
 export type ComebackNudgeKind =
   | 'one_rep_left'
@@ -196,4 +197,14 @@ export async function dismissComebackNudgeToday(
     dayKey: localDayKey(now),
   };
   await AsyncStorage.setItem(DISMISS_KEY, JSON.stringify(payload));
+}
+
+
+export async function getComebackNudgesEnabled(): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(ENABLED_KEY);
+  return raw !== 'false';
+}
+
+export async function setComebackNudgesEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(ENABLED_KEY, enabled ? 'true' : 'false');
 }
