@@ -15,7 +15,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
-import { spacing } from '@/constants/theme';
+import { palette, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthContext';
 import type { ConversationHistoryItem } from '@/lib/db/conversations';
 import { getConversationHistory } from '@/lib/db/conversations';
@@ -86,28 +86,31 @@ export default function HistoryScreen() {
     return (
       <GradientBackground>
         <View style={[styles.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg }]}>
-          <VoxaText variant="title" style={styles.title}>
-            Conversation history
+          <VoxaText variant="caption" style={styles.overline}>
+            Practice journal
+          </VoxaText>
+          <VoxaText variant="hero" style={styles.title}>
+            Your conversations.
           </VoxaText>
           {!user ? (
             <VoxaText variant="body">
-              Sign in to sync transcripts and session notes to your account. Until then, progress stays on this device only.
+              Sign in to sync transcripts, summaries, and session history to your account. Your XP can still stay local until then.
             </VoxaText>
           ) : (
-            <VoxaText variant="body">Connect Supabase in your build env to load cloud history on this device.</VoxaText>
+            <VoxaText variant="body">Cloud history is unavailable in this build because Supabase is not configured.</VoxaText>
           )}
 
           {!user ? (
             <PolishedEmptyState
-              title="Sign in to sync your journal"
-              body="Progress can stay on this device, or create an account to keep session history consistent across installs."
-              footnote="Beta: sign in with email and password on the Profile tab."
+              title="Sign in to keep your journal"
+              body="Create an account when you want your practice history to stay consistent across installs and devices."
+              footnote="You can sign in from the Profile tab."
               compact
             />
           ) : (
             <PolishedEmptyState
-              title="Cloud history unavailable in this build"
-              body="This install is missing Supabase environment keys. Session history sync is turned off until the app is configured."
+              title="Cloud history unavailable"
+              body="This install is missing the Supabase environment keys required for synced session history."
               footnote="Builders: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY."
               compact
             />
@@ -124,14 +127,14 @@ export default function HistoryScreen() {
 
   return (
     <GradientBackground>
-      <View style={[styles.container, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg }]}>
-        <VoxaText variant="caption" style={styles.betaTag}>
-          TestFlight beta
+      <View style={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg }]}>
+        <VoxaText variant="caption" style={styles.overline}>
+          Practice journal
         </VoxaText>
-        <VoxaText variant="title" style={styles.title}>
-          Conversation history
+        <VoxaText variant="hero" style={styles.title}>
+          Your conversations.
         </VoxaText>
-        <VoxaText variant="body">Your recent voice sessions, newest first.</VoxaText>
+        <VoxaText variant="body">Recent practice sessions, newest first.</VoxaText>
 
         {error ? (
           <GlassPanel style={styles.empty}>
@@ -155,8 +158,8 @@ export default function HistoryScreen() {
             !loading ? (
               <PolishedEmptyState
                 title="Your practice journal starts here"
-                body="After voice sessions, summaries and session notes appear in this list — newest first."
-                footnote="Tip: finish one scenario on the Practice tab, then come back to see your first entry."
+                body="After a completed session, summaries and session notes appear here so you can see what you practiced."
+                footnote="Finish one scenario on the Practice tab, then come back for your first entry."
                 compact
               />
             ) : null
@@ -190,12 +193,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   title: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
-  betaTag: {
+  overline: {
+    color: palette.cyan,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    opacity: 0.85,
   },
   empty: {
     marginTop: spacing.md,
@@ -216,6 +219,8 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   cardTitle: {
+    color: palette.textPrimary,
+    fontWeight: '700',
     marginBottom: spacing.xs,
   },
   loader: {
