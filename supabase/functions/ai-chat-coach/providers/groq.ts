@@ -51,7 +51,7 @@ export async function callGroqCoach(
       model,
       messages,
       temperature: 0.75,
-      max_tokens: 1024,
+      max_tokens: params.maxOutputTokens,
       response_format: { type: "json_object" },
     }),
   });
