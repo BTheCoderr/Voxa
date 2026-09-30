@@ -9,6 +9,7 @@ import type { WeeklyCoachPlan, WeeklyCoachPlanItem } from '@/lib/progress/weekly
 type Props = {
   plan: WeeklyCoachPlan;
   languageLabel: string;
+  levelLabel: string;
   onStart: (item: WeeklyCoachPlanItem) => void;
 };
 
@@ -26,7 +27,7 @@ function sourceLabel(item: WeeklyCoachPlanItem): string {
   }
 }
 
-export function WeeklyCoachPlanCard({ plan, languageLabel, onStart }: Props) {
+export function WeeklyCoachPlanCard({ plan, languageLabel, levelLabel, onStart }: Props) {
   const progressLabel = `${plan.completedCount}/${plan.totalCount}`;
   const progressWidth = `${
     plan.totalCount > 0
@@ -39,7 +40,7 @@ export function WeeklyCoachPlanCard({ plan, languageLabel, onStart }: Props) {
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <VoxaText variant="caption" style={styles.overline}>
-            This week · {languageLabel}
+            This week · {languageLabel} · {levelLabel}
           </VoxaText>
           <VoxaText variant="title">{plan.headline}</VoxaText>
           <VoxaText variant="body" style={styles.summary}>
