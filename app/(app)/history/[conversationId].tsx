@@ -102,7 +102,10 @@ export default function CoachingJournalEntryScreen() {
       has_structured_review: Boolean(review),
     });
 
-    openScenarioPractice(recommendedScenario.id, fromApiLearningPath(learningPath));
+    openScenarioPractice(recommendedScenario.id, fromApiLearningPath(learningPath), {
+      focus: review?.focus,
+      mission: review?.nextMission,
+    });
   }, [entry, learningPath, recommendedScenario, review]);
 
   if (!initialized || loading) {
