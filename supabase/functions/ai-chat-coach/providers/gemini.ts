@@ -49,7 +49,7 @@ export async function callGeminiCoach(
       contents,
       generationConfig: {
         temperature: 0.75,
-        maxOutputTokens: 1024,
+        maxOutputTokens: params.maxOutputTokens,
         responseMimeType: "application/json",
       },
     }),
