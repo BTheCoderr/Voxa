@@ -1,67 +1,151 @@
 # Voxa
 
 <!-- repo-intro:start -->
-**Project snapshot:** Voxa is a mobile-first AI speaking-practice app for iOS and Android. It combines real-time voice or lower-cost text/dictation practice, structured corrections, daily practice missions, progress tracking, and Supabase-backed account sync.
+**Project snapshot:** Voxa is a mobile-first AI speaking-practice app for iOS and Android. It combines realistic conversation scenarios, realtime voice, lower-cost text/dictation practice, structured corrections, daily missions, progress tracking, and synced practice history.
 
-**What it demonstrates:** Expo / React Native · TypeScript · OpenAI Realtime · Groq + Gemini fallback · Supabase · ElevenLabs · RevenueCat wiring · PostHog · EAS/TestFlight/App Store delivery.
+**What it demonstrates:** Expo / React Native · TypeScript · OpenAI Realtime · Groq + Gemini fallback · Supabase · ElevenLabs · RevenueCat integration foundation · PostHog · EAS/TestFlight release engineering.
 <!-- repo-intro:end -->
 
-## What Voxa does
+> **Practice real conversations out loud.**
 
-Voxa helps people practice the conversations that are hard to rehearse alone. Users choose a learning path, enter a realistic scenario, respond naturally, and get lightweight coaching instead of a classroom-style lesson.
+Voxa is designed for the conversations that are hard to rehearse alone: interviews, meetings, travel, networking, small talk, customer support, restaurants, and dating.
 
-Current learning paths:
-
-- Business English
-- Spanish
-- Mandarin
-
-Current scenario library includes job interviews, meetings, networking, small talk, airports, restaurants, customer support, travel, and dating conversations.
+Instead of turning speaking practice into another classroom-style lesson, Voxa puts the user inside a realistic scenario and gives lightweight coaching after they respond.
 
 ## Product experience
 
-- **Daily mission** — one focused practice challenge each day
-- **Scenario missions** — every scenario has a skill focus, difficulty, and concrete goal
-- **Voice mode** — speech-to-speech practice using the realtime stack
-- **Text + dictation mode** — lower-cost practice with AI replies and structured corrections
-- **Progress** — XP, streaks, and five calm progression stages: Foundation → Momentum → Flow → Range → Presence
-- **Practice journal** — synced conversation history and summaries for signed-in users
-- **Local-first progress** — the app remains useful before account creation
-- **Three learning paths** — Business English, Spanish, and Mandarin
-- **Diagnostics** — tester-facing health checks for the realtime and AI services
+### Practice
+
+- daily speaking mission
+- scenario-based sessions with a clear skill focus and goal
+- Business English, Spanish, and Mandarin learning paths
+- voice-first realtime conversations
+- lower-cost text + dictation practice
+- structured corrections without turning every response into a grade
+
+### Progress
+
+- XP
+- speaking-day streaks
+- five progression stages: **Foundation → Momentum → Flow → Range → Presence**
+- signed-in practice journal
+- session history and summaries
+- local-first progress before account creation
+
+### Product operations
+
+- tester-facing AI/realtime diagnostics
+- EAS build configuration
+- TestFlight checklist
+- App Store metadata and screenshot plan
+- privacy/security documentation
+- separate Next.js marketing site under `/marketing`
 
 ## Architecture
 
-The mobile app is built with Expo Router and React Native.
+```mermaid
+flowchart LR
+    A[Expo mobile app] --> B[Supabase Auth + data]
+    A --> C[Realtime session endpoint]
+    C --> D[OpenAI Realtime]
+    A --> E[Text coaching endpoint]
+    E --> F[Groq]
+    E --> G[Gemini fallback]
+    A --> H[TTS endpoint]
+    H --> I[ElevenLabs]
+    A --> J[PostHog]
+    A --> K[RevenueCat foundation]
+```
 
-- **Auth + data:** Supabase
-- **Realtime voice:** OpenAI Realtime session flow
-- **Text coaching:** Groq with Gemini fallback
-- **Voice playback:** ElevenLabs through a server-side function
-- **Analytics:** PostHog
-- **Purchases foundation:** RevenueCat
-- **Build + release:** EAS
-- **Marketing site:** separate Next.js app under /marketing
+Provider secret keys do not belong in the public mobile bundle. Realtime, text-generation, and TTS provider credentials are kept behind server-side functions.
 
-The public client never needs provider secret keys. AI/TTS provider secrets belong on the server side.
+## AI delivery strategy
+
+Voxa uses different AI paths for different product needs rather than forcing every interaction through the most expensive mode.
+
+- **Realtime voice:** OpenAI Realtime for natural speech-to-speech practice.
+- **Text coaching:** Groq as the primary lower-cost path with Gemini fallback.
+- **Voice playback:** ElevenLabs through a server-side function.
+- **Diagnostics:** dedicated health/configuration surfaces help testers distinguish provider outages from client bugs.
+
+That split keeps the experience flexible while giving the product multiple cost/performance options.
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Mobile | Expo 54, React Native 0.81, Expo Router |
+| Language | TypeScript |
+| Auth + data | Supabase |
+| Realtime voice | OpenAI Realtime |
+| Text AI | Groq + Gemini fallback |
+| TTS | ElevenLabs |
+| Local persistence | AsyncStorage / SecureStore |
+| Analytics | PostHog |
+| Purchases foundation | RevenueCat |
+| Builds/releases | EAS |
+| Marketing | Next.js app in `/marketing` |
+
+## Repository structure
+
+```text
+app/              Expo Router screens and navigation
+components/       reusable mobile UI
+lib/              AI, auth, persistence, analytics, and product logic
+assets/           app icons and visual assets
+supabase/         backend functions / database work
+docs/             architecture, security, release, QA, screenshots
+marketing/        separate web marketing site
+eas.json          release profiles
+app.json          native app configuration
+```
 
 ## Local setup
 
-1. Copy .env.example to .env.
-2. Add the public Supabase and service URLs required for the mode you are testing.
-3. Run the mobile app with Expo / a development build.
+```bash
+cp .env.example .env
+npm install
+npm start
+```
 
-Release builds should use EAS environment secrets instead of committing credentials. See docs/EAS_BUILD.md.
+For native voice functionality, use a development or production build rather than Expo Go.
 
-## Important docs
+```bash
+npm run ios
+# or
+npm run android
+```
 
-- docs/ARCHITECTURE.md
-- docs/AI_PROVIDERS.md
-- docs/REALTIME_SESSION.md
-- docs/EAS_BUILD.md
-- docs/SECURITY.md
-- docs/BETA_QA_CHECKLIST.md
+Release builds should use EAS-managed environment secrets instead of committed provider credentials.
 
-## Marketing site
+## Release engineering
 
-The web marketing experience lives in /marketing. Root netlify.toml sets base = "marketing", so Netlify builds the marketing site rather than the Expo app.
+The repository tracks the non-code work needed to ship a mobile AI product, including:
+
+- bundle identifiers and native permission strings
+- EAS release configuration
+- auth redirect requirements
+- physical-device QA
+- TestFlight testing notes
+- App Store metadata
+- screenshot capture plan
+- security boundaries
+- provider-specific architecture documentation
+
+## Key documentation
+
+- [Architecture](./docs/ARCHITECTURE.md)
+- [AI providers](./docs/AI_PROVIDERS.md)
+- [Realtime session flow](./docs/REALTIME_SESSION.md)
+- [Security](./docs/SECURITY.md)
+- [EAS build guide](./docs/EAS_BUILD.md)
+- [TestFlight checklist](./docs/TESTFLIGHT.md)
+- [Beta QA checklist](./docs/BETA_QA_CHECKLIST.md)
+- [App Store metadata](./docs/APP_STORE_METADATA.md)
+- [Screenshot plan](./docs/SCREENSHOTS.md)
+
+## Product principle
+
+Voxa rewards **showing up and speaking**, not perfect answers.
+
+The goal is short, realistic practice that builds comfort through repetition.
