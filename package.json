@@ -13,7 +13,7 @@
     "@edkimmel/expo-audio-stream": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-navigation/native": "^7.1.8",
+    "@react-navigation/native": "^7.4.1",
     "@supabase/supabase-js": "^2.105.4",
     "expo": "~54.0.33",
     "expo-asset": "~12.0.13",
