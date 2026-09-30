@@ -44,14 +44,20 @@ Instead of turning speaking practice into another classroom-style lesson, Voxa p
 - voice-first realtime conversations
 - lower-cost text + dictation practice
 - structured corrections without turning every response into a grade
+- per-language Beginner / Intermediate / Advanced coaching difficulty
+- targeted replay from saved coaching focus and correction history
 
 ### Progress
 
 - XP
 - speaking-day streaks
 - five progression stages: **Foundation → Momentum → Flow → Range → Presence**
-- signed-in practice journal
-- session history and summaries
+- Coaching Journal with saved recaps and corrections
+- long-term Coaching Memory + Correction Mastery
+- stable Weekly Coach Plans with targeted reps
+- evidence-based Adaptive Difficulty recommendations
+- factual recent-vs-earlier Progress Trends
+- respectful in-app Come-back nudges with daily dismissal + opt-out
 - local-first progress before account creation
 
 ### Product operations
