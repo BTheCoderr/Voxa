@@ -1,9 +1,11 @@
+import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CoachMemoryCard } from '@/components/progress/CoachMemoryCard';
+import { CorrectionMasterySnapshot } from '@/components/progress/CorrectionMasterySnapshot';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -13,10 +15,17 @@ import type { LaunchLanguage, ScenarioId } from '@/constants/scenarios';
 import { palette, radii, spacing } from '@/constants/theme';
 import { openScenarioPractice } from '@/lib/ai/openPractice';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { getRecentReviewedConversations } from '@/lib/db/conversations';
+import {
+  getCorrectionMasteryData,
+  getRecentReviewedConversations,
+} from '@/lib/db/conversations';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import { getPreferredLanguage } from '@/lib/preferences/storage';
 import { buildLearnerCoachMemory, type LearnerCoachMemory } from '@/lib/progress/coachMemory';
+import {
+  buildCorrectionMastery,
+  type CorrectionMasterySummary,
+} from '@/lib/progress/correctionMastery';
 import { getCoachLevel } from '@/lib/progress/levels';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import { supabase } from '@/lib/supabase/client';
@@ -27,6 +36,8 @@ export default function ProgressScreen() {
   const { user } = useAuth();
   const { progress, progressHydrated } = useProgress();
   const [coachMemory, setCoachMemory] = useState<LearnerCoachMemory | null>(null);
+  const [correctionMastery, setCorrectionMastery] =
+    useState<CorrectionMasterySummary | null>(null);
   const [memoryLanguage, setMemoryLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
 
   useFocusEffect(
@@ -35,24 +46,40 @@ export default function ProgressScreen() {
 
       void (async () => {
         if (!user) {
-          if (active) setCoachMemory(null);
+          if (active) {
+            setCoachMemory(null);
+            setCorrectionMastery(null);
+          }
           return;
         }
 
         try {
           const storedLanguage = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
-          const rows = await getRecentReviewedConversations(
-            supabase,
-            user.id,
-            toApiLearningPath(storedLanguage),
-            10,
-          );
+          const learningPath = toApiLearningPath(storedLanguage);
+          const [rows, masteryData] = await Promise.all([
+            getRecentReviewedConversations(
+              supabase,
+              user.id,
+              learningPath,
+              10,
+            ),
+            getCorrectionMasteryData(
+              supabase,
+              user.id,
+              learningPath,
+              30,
+            ),
+          ]);
           if (!active) return;
           setMemoryLanguage(storedLanguage);
           setCoachMemory(buildLearnerCoachMemory(rows));
+          setCorrectionMastery(buildCorrectionMastery(masteryData));
         } catch (error) {
-          console.warn('loadCoachMemory', error);
-          if (active) setCoachMemory(null);
+          console.warn('loadProgressCoaching', error);
+          if (active) {
+            setCoachMemory(null);
+            setCorrectionMastery(null);
+          }
         }
       })();
 
@@ -155,6 +182,18 @@ export default function ProgressScreen() {
               onStartScenario={(scenarioId: ScenarioId) =>
                 openScenarioPractice(scenarioId, memoryLanguage)
               }
+            />
+          </>
+        ) : null}
+
+        {user && correctionMastery ? (
+          <>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Things you’re mastering
+            </VoxaText>
+            <CorrectionMasterySnapshot
+              mastery={correctionMastery}
+              onOpen={() => router.push('/(app)/mastery')}
             />
           </>
         ) : null}
