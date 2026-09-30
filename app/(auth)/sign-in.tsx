@@ -17,7 +17,10 @@ import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { palette, spacing } from '@/constants/theme';
 import { formatAuthError, validateEmail, validatePassword } from '@/lib/auth/authErrors';
-import { getAuthMagicLinkRedirectUrl } from '@/lib/auth/magicLinkRedirect';
+import {
+  getAuthMagicLinkRedirectUrl,
+  getPasswordRecoveryRedirectUrl,
+} from '@/lib/auth/magicLinkRedirect';
 import { trackEvent } from '@/lib/analytics/track';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase/client';
@@ -99,6 +102,41 @@ export default function SignInScreen() {
       Alert.alert(
         'Check your email',
         'We sent a confirmation link. After confirming, sign in with your password here.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!env.supabaseConfigured) {
+      Alert.alert('Supabase not configured', 'Add EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.');
+      return;
+    }
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setFieldError(emailErr);
+      return;
+    }
+
+    setFieldError(null);
+    setBusy(true);
+    trackEvent('password_recovery_requested');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: getPasswordRecoveryRedirectUrl(),
+      });
+
+      if (error) {
+        setFieldError('Could not send the reset email right now. Try again.');
+        return;
+      }
+
+      Alert.alert(
+        'Check your email',
+        'If an account exists for that address, Voxa sent a password reset link.',
       );
     } finally {
       setBusy(false);
@@ -220,6 +258,18 @@ export default function SignInScreen() {
             onSubmitEditing={() => void handlePasswordAuth()}
           />
 
+          {isSignIn ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void handleForgotPassword()}
+              disabled={busy || !email.trim() || !env.supabaseConfigured}
+              style={styles.forgotPassword}>
+              <VoxaText variant="caption" style={styles.forgotPasswordLabel}>
+                Forgot password?
+              </VoxaText>
+            </Pressable>
+          ) : null}
+
           {fieldError ? (
             <VoxaText variant="body" style={styles.error}>
               {fieldError}
@@ -314,6 +364,15 @@ const styles = StyleSheet.create({
   },
   back: {
     marginTop: spacing.md,
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: 2,
+  },
+  forgotPasswordLabel: {
+    color: palette.cyan,
+    fontWeight: '700',
   },
   altToggle: {
     alignSelf: 'center',

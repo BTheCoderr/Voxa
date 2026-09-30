@@ -11,6 +11,7 @@ import { VoxaText } from '@/components/ui/VoxaText';
 import { palette, spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
 import { completeSessionFromUrl } from '@/lib/auth/completeSessionFromUrl';
+import { parseAuthParamsFromUrl } from '@/lib/auth/parseAuthUrl';
 import { env } from '@/lib/env';
 
 type Phase = 'working' | 'redirecting' | 'error';
@@ -36,14 +37,16 @@ export default function AuthCallbackScreen() {
       }
     };
 
-    const finishOk = () => {
+    const finishOk = (isRecovery: boolean) => {
       if (!alive || handledRef.current) return;
       handledRef.current = true;
       clearTimer();
       setPhase('redirecting');
-      trackEvent('auth_magic_link_completed', { ok: true });
+      trackEvent(isRecovery ? 'password_recovery_link_completed' : 'auth_magic_link_completed', {
+        ok: true,
+      });
       setTimeout(() => {
-        router.replace('/');
+        router.replace(isRecovery ? '/auth/recovery' : '/');
       }, REDIRECT_MS);
     };
 
@@ -63,10 +66,12 @@ export default function AuthCallbackScreen() {
       clearTimer();
       processingRef.current = true;
       try {
+        const params = parseAuthParamsFromUrl(url);
+        const isRecovery = params.type === 'recovery';
         const result = await completeSessionFromUrl(url);
         if (!alive || handledRef.current) return;
         if (result.ok) {
-          finishOk();
+          finishOk(isRecovery);
         } else {
           finishErr(result.message);
         }

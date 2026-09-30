@@ -33,7 +33,7 @@ export async function completeSessionFromUrl(url: string): Promise<CompleteSessi
         ok: false,
         message:
           error.message.includes('expired') || error.message.includes('invalid')
-            ? 'This sign-in link has expired. Request a new magic link from the sign-in screen.'
+            ? 'This authentication link has expired. Request a new link and try again.'
             : error.message,
       };
     }
@@ -48,7 +48,7 @@ export async function completeSessionFromUrl(url: string): Promise<CompleteSessi
         ok: false,
         message:
           error.message.includes('expired') || error.message.includes('invalid')
-            ? 'This sign-in link has expired. Request a new magic link.'
+            ? 'This authentication link has expired. Request a new link.'
             : error.message,
       };
     }
@@ -57,6 +57,6 @@ export async function completeSessionFromUrl(url: string): Promise<CompleteSessi
 
   return {
     ok: false,
-    message: 'This link is missing sign-in data or has expired. Please request a new magic link.',
+    message: 'This authentication link is missing required data or has expired. Please request a new link.',
   };
 }

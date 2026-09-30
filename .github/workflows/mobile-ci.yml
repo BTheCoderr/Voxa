@@ -23,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
+      - name: Mobile config
+        run: npm run check:config
+
       - name: TypeScript
         run: npm run typecheck
 

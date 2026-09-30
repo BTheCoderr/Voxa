@@ -147,7 +147,7 @@ export default function DebugHealthScreen() {
         <GlassPanel style={styles.card}>
           <Row label="Supabase configured" value={boolLabel(env.supabaseConfigured)} />
           <Row label="Signed in" value={initialized ? boolLabel(Boolean(user)) : '…'} />
-          <Row label="AI mode" value={isVoicePracticeMode() ? 'voice (premium)' : 'text (default)'} />
+          <Row label="AI mode" value={isVoicePracticeMode() ? 'voice' : 'text'} />
           <Row label="AI chat coach URL" value={boolLabel(env.aiChatCoachConfigured)} />
           <Row label="ElevenLabs TTS URL" value={boolLabel(env.elevenLabsTtsConfigured)} />
           <Row label="TTS health" value={ttsHealth} />
