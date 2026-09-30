@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
 import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
 import { DailyCoachCard } from '@/components/practice/DailyCoachCard';
+import { WeeklyCoachPlanCard } from '@/components/progress/WeeklyCoachPlanCard';
 import { LanguagePathPicker } from '@/components/practice/LanguagePathPicker';
 import { PracticeModeFraming } from '@/components/practice/PracticeModeFraming';
 import { ScenarioCard } from '@/components/scenario/ScenarioCard';
@@ -32,6 +33,11 @@ import {
 import { getDailyMission, wasActiveToday } from '@/lib/practice/dailyMission';
 import { buildLearnerCoachMemory } from '@/lib/progress/coachMemory';
 import { getCoachLevel } from '@/lib/progress/levels';
+import {
+  loadWeeklyCoachPlan,
+  type WeeklyCoachPlan,
+  type WeeklyCoachPlanItem,
+} from '@/lib/progress/weeklyCoachPlan';
 import { useProgress } from '@/lib/progress/useProgress';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import { supabase } from '@/lib/supabase/client';
@@ -41,6 +47,7 @@ export default function PracticeHomeScreen() {
   const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<LaunchLanguage | null | undefined>(undefined);
   const [personalizedMission, setPersonalizedMission] = useState<PersonalizedMission | null>(null);
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyCoachPlan | null>(null);
   const { user } = useAuth();
   const { progress, progressHydrated, refresh } = useProgress();
 
@@ -54,18 +61,32 @@ export default function PracticeHomeScreen() {
         const selectedLanguage = stored ?? DEFAULT_LAUNCH_LANGUAGE;
         let resolvedPlan = localPlan;
 
-        if (!resolvedPlan && user) {
+        if (user) {
           try {
-            const rows = await getRecentReviewedConversations(
-              supabase,
-              user.id,
-              toApiLearningPath(selectedLanguage),
-              10,
-            );
-            resolvedPlan = buildMissionFromCoachMemory(buildLearnerCoachMemory(rows));
+            const learningPath = toApiLearningPath(selectedLanguage);
+            const [rows, loadedWeeklyPlan] = await Promise.all([
+              getRecentReviewedConversations(
+                supabase,
+                user.id,
+                learningPath,
+                10,
+              ),
+              loadWeeklyCoachPlan(
+                supabase,
+                user.id,
+                learningPath,
+              ),
+            ]);
+            if (!resolvedPlan) {
+              resolvedPlan = buildMissionFromCoachMemory(buildLearnerCoachMemory(rows));
+            }
+            setWeeklyPlan(loadedWeeklyPlan);
           } catch (error) {
-            console.warn('loadCloudCoachMission', error);
+            console.warn('loadCloudCoaching', error);
+            setWeeklyPlan(null);
           }
+        } else {
+          setWeeklyPlan(null);
         }
 
         setLanguage(selectedLanguage);
@@ -79,7 +100,25 @@ export default function PracticeHomeScreen() {
     setLanguage(lang);
     await setPreferredLanguage(lang);
     trackEvent('learning_path_selected', { language: lang });
-  }, []);
+
+    if (!user) {
+      setWeeklyPlan(null);
+      return;
+    }
+
+    try {
+      setWeeklyPlan(
+        await loadWeeklyCoachPlan(
+          supabase,
+          user.id,
+          toApiLearningPath(lang),
+        ),
+      );
+    } catch (error) {
+      console.warn('loadWeeklyCoachPlanAfterPathChange', error);
+      setWeeklyPlan(null);
+    }
+  }, [user?.id]);
 
   const effectiveLanguage = language ?? DEFAULT_LAUNCH_LANGUAGE;
 
@@ -191,6 +230,27 @@ export default function PracticeHomeScreen() {
               )
             }
           />
+        ) : null}
+
+        {user && weeklyPlan ? (
+          <View style={styles.weeklyPlanWrap}>
+            <WeeklyCoachPlanCard
+              plan={weeklyPlan}
+              languageLabel={launchLanguageLabel(effectiveLanguage)}
+              onStart={(item: WeeklyCoachPlanItem) => {
+                trackEvent('weekly_coach_plan_started', {
+                  scenario_id: item.scenarioId,
+                  source: item.source,
+                  week_key: weeklyPlan.weekKey,
+                  learning_path: effectiveLanguage,
+                });
+                openScenarioPractice(item.scenarioId, effectiveLanguage, {
+                  focus: item.focus,
+                  mission: item.mission,
+                });
+              }}
+            />
+          </View>
         ) : null}
 
         <View style={styles.sectionHeader}>
@@ -314,6 +374,9 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     height: 34,
     backgroundColor: palette.frostStrong,
+  },
+  weeklyPlanWrap: {
+    marginTop: spacing.xxl,
   },
   sectionHeader: {
     marginTop: spacing.xxl,

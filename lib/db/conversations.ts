@@ -44,6 +44,11 @@ export type ReviewedConversationItem = Pick<
   'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'coach_review' | 'ended_at'
 >;
 
+export type WeeklyCompletedConversation = Pick<
+  ConversationRow,
+  'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'ended_at'
+>;
+
 export type CorrectionMasteryConversation = Pick<
   ConversationRow,
   'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'ended_at'
@@ -200,14 +205,21 @@ export async function getRecentReviewedConversations(
   userId: string,
   learningPath: ApiLearningPath,
   limit = 10,
+  endedBefore?: string,
 ): Promise<ReviewedConversationItem[]> {
-  const { data, error } = await client
+  let query = client
     .from('conversations')
     .select('id, scenario_id, scenario_title, learning_path, coach_review, ended_at')
     .eq('user_id', userId)
     .eq('status', 'completed')
     .eq('learning_path', learningPath)
-    .not('coach_review', 'is', null)
+    .not('coach_review', 'is', null);
+
+  if (endedBefore) {
+    query = query.lt('ended_at', endedBefore);
+  }
+
+  const { data, error } = await query
     .order('ended_at', { ascending: false })
     .limit(limit);
 
@@ -254,14 +266,21 @@ export async function getCorrectionMasteryData(
   userId: string,
   learningPath: ApiLearningPath,
   conversationLimit = 30,
+  endedBefore?: string,
 ): Promise<CorrectionMasteryData> {
-  const { data: conversations, error: conversationError } = await client
+  let conversationQuery = client
     .from('conversations')
     .select('id, scenario_id, scenario_title, learning_path, ended_at')
     .eq('user_id', userId)
     .eq('status', 'completed')
     .eq('learning_path', learningPath)
-    .not('ended_at', 'is', null)
+    .not('ended_at', 'is', null);
+
+  if (endedBefore) {
+    conversationQuery = conversationQuery.lt('ended_at', endedBefore);
+  }
+
+  const { data: conversations, error: conversationError } = await conversationQuery
     .order('ended_at', { ascending: false })
     .limit(conversationLimit);
 
@@ -286,4 +305,26 @@ export async function getCorrectionMasteryData(
     conversations: completed,
     corrections: corrections ?? [],
   };
+}
+
+
+export async function getCompletedConversationsBetween(
+  client: SupabaseClient<Database>,
+  userId: string,
+  learningPath: ApiLearningPath,
+  startedAt: string,
+  endedBefore: string,
+): Promise<WeeklyCompletedConversation[]> {
+  const { data, error } = await client
+    .from('conversations')
+    .select('id, scenario_id, scenario_title, learning_path, ended_at')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .eq('learning_path', learningPath)
+    .gte('ended_at', startedAt)
+    .lt('ended_at', endedBefore)
+    .order('ended_at', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
 }
