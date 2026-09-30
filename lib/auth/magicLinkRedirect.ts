@@ -33,7 +33,7 @@ function normalizeCustomSchemeRedirect(url: string, scheme: string): string {
  * If `voxa://auth/callback` is missing from Redirect URLs, or the **email template** does not use
  * `{{ .ConfirmationURL }}`, users may still land on **Site URL** (`https://voxxa.netlify.app/...`).
  */
-function buildAuthRedirect(path: 'auth/callback' | 'auth/recovery'): string {
+function buildAuthRedirect(path: 'auth/callback'): string {
   if (Platform.OS === 'web') {
     const configured = process.env.EXPO_PUBLIC_AUTH_WEB_REDIRECT_URL?.trim();
     if (configured) {
@@ -83,5 +83,6 @@ export function getAuthMagicLinkRedirectUrl(): string {
 }
 
 export function getPasswordRecoveryRedirectUrl(): string {
-  return buildAuthRedirect('auth/recovery');
+  // Reuse the proven callback URL so password reset does not need another Supabase allow-list entry.
+  return buildAuthRedirect('auth/callback');
 }
