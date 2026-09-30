@@ -119,7 +119,7 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
     sessionGoal !== undefined &&
     (typeof sessionGoal !== "string" || sessionGoal.trim().length > MAX_SESSION_GOAL_CHARS)
   ) {
-    throw new ValidationError(``sessionGoal` must be a string up to ${MAX_SESSION_GOAL_CHARS} characters`);
+    throw new ValidationError(`sessionGoal must be a string up to ${MAX_SESSION_GOAL_CHARS} characters`);
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new ValidationError("`messages` must be a non-empty array");
