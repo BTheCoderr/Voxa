@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { getScenario } from '@/constants/scenarios';
 import type { SessionCoachReview } from '@/lib/ai/providers/types';
+import type { LearnerCoachMemory } from '@/lib/progress/coachMemory';
+import { coachSkillLabel } from '@/lib/progress/coachSkills';
 
 const KEY = '@voxa/coach-plan/v1';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -59,4 +62,34 @@ export async function loadPersonalizedMission(): Promise<PersonalizedMission | n
 
 export async function clearPersonalizedMission(): Promise<void> {
   await AsyncStorage.removeItem(KEY);
+}
+
+
+export function buildMissionFromCoachMemory(
+  memory: LearnerCoachMemory,
+): PersonalizedMission | null {
+  const primaryScenarioId = memory.recommendedScenarioIds[0];
+  const primaryScenario = primaryScenarioId ? getScenario(primaryScenarioId) : null;
+
+  if (memory.sessionsAnalyzed >= 2 && memory.primaryFocus && primaryScenario) {
+    const focusLabel = coachSkillLabel(memory.primaryFocus);
+    return {
+      scenarioId: primaryScenario.id,
+      title: `Build ${focusLabel.toLowerCase()}`,
+      instruction: `This is the most repeated focus across your last ${memory.sessionsAnalyzed} coached sessions. Practice it in ${primaryScenario.title.toLowerCase()} and keep the conversation moving.`,
+      focus: focusLabel,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  const latest = memory.latestReview;
+  if (!latest) return null;
+
+  return {
+    scenarioId: latest.suggestedScenarioId,
+    title: latest.headline,
+    instruction: latest.nextMission,
+    focus: latest.focus,
+    createdAt: new Date().toISOString(),
+  };
 }
