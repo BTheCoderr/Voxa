@@ -1,14 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { SessionCoachReview } from '@/lib/ai/providers/types';
 import type { ApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 
-import type { ConversationRow, Database, MessageRole } from './database.types';
+import type { ConversationRow, Database, Json, MessageRole } from './database.types';
 import { ensureUserProfileRows } from './progress';
 
 export type ConversationHistoryItem = Pick<
   ConversationRow,
   'id' | 'scenario_id' | 'scenario_title' | 'status' | 'summary' | 'started_at' | 'ended_at' | 'xp_awarded'
+>;
+
+export type ReviewedConversationItem = Pick<
+  ConversationRow,
+  'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'coach_review' | 'ended_at'
 >;
 
 export async function createConversation(
@@ -111,6 +117,7 @@ export async function completeConversation(
     status?: 'completed' | 'aborted';
     aiProviderUsed?: string | null;
     aiUsedFallback?: boolean | null;
+    coachReview?: SessionCoachReview | null;
   },
 ): Promise<void> {
   const { error } = await client
@@ -122,6 +129,9 @@ export async function completeConversation(
       xp_awarded: args.xpAwarded,
       ...(args.aiProviderUsed !== undefined ? { ai_provider_used: args.aiProviderUsed } : {}),
       ...(args.aiUsedFallback !== undefined ? { ai_used_fallback: args.aiUsedFallback } : {}),
+      ...(args.coachReview !== undefined
+        ? { coach_review: args.coachReview as unknown as Json }
+        : {}),
     })
     .eq('id', args.conversationId)
     .eq('user_id', args.userId);
@@ -141,6 +151,27 @@ export async function getConversationHistory(
     .select('id, scenario_id, scenario_title, status, summary, started_at, ended_at, xp_awarded')
     .eq('user_id', userId)
     .order('started_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+
+export async function getRecentReviewedConversations(
+  client: SupabaseClient<Database>,
+  userId: string,
+  learningPath: ApiLearningPath,
+  limit = 10,
+): Promise<ReviewedConversationItem[]> {
+  const { data, error } = await client
+    .from('conversations')
+    .select('id, scenario_id, scenario_title, learning_path, coach_review, ended_at')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .eq('learning_path', learningPath)
+    .not('coach_review', 'is', null)
+    .order('ended_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
