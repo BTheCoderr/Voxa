@@ -44,6 +44,16 @@ export type ReviewedConversationItem = Pick<
   'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'coach_review' | 'ended_at'
 >;
 
+export type CorrectionMasteryConversation = Pick<
+  ConversationRow,
+  'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'ended_at'
+>;
+
+export type CorrectionMasteryData = {
+  conversations: CorrectionMasteryConversation[];
+  corrections: CorrectionRow[];
+};
+
 export async function createConversation(
   client: SupabaseClient<Database>,
   args: {
@@ -234,6 +244,46 @@ export async function getConversationJournalEntry(
 
   return {
     ...conversation,
+    corrections: corrections ?? [],
+  };
+}
+
+
+export async function getCorrectionMasteryData(
+  client: SupabaseClient<Database>,
+  userId: string,
+  learningPath: ApiLearningPath,
+  conversationLimit = 30,
+): Promise<CorrectionMasteryData> {
+  const { data: conversations, error: conversationError } = await client
+    .from('conversations')
+    .select('id, scenario_id, scenario_title, learning_path, ended_at')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .eq('learning_path', learningPath)
+    .not('ended_at', 'is', null)
+    .order('ended_at', { ascending: false })
+    .limit(conversationLimit);
+
+  if (conversationError) throw conversationError;
+
+  const completed = conversations ?? [];
+  if (completed.length === 0) {
+    return { conversations: [], corrections: [] };
+  }
+
+  const conversationIds = completed.map((conversation) => conversation.id);
+  const { data: corrections, error: correctionError } = await client
+    .from('corrections')
+    .select('id, conversation_id, user_id, body, original, improved, explanation, created_at')
+    .eq('user_id', userId)
+    .in('conversation_id', conversationIds)
+    .order('created_at', { ascending: false });
+
+  if (correctionError) throw correctionError;
+
+  return {
+    conversations: completed,
     corrections: corrections ?? [],
   };
 }
