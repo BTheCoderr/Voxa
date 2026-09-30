@@ -1,18 +1,48 @@
 import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PracticeLevelPicker } from '@/components/practice/PracticeLevelPicker';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
+import { type LaunchLanguage } from '@/constants/scenarios';
 import { palette, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
+import {
+  getPreferredLanguage,
+  getPreferredLevel,
+  setPreferredLevel,
+} from '@/lib/preferences/storage';
+import { practiceLevelLabel } from '@/lib/progress/adaptiveDifficulty';
+import type { UserLevel } from '@/lib/realtime/types';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, signOut, initialized } = useAuth();
+  const [practiceLanguage, setPracticeLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
+  const [practiceLevel, setPracticeLevelState] = useState<UserLevel>('intermediate');
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void (async () => {
+        const language = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
+        const level = await getPreferredLevel(language);
+        if (!active) return;
+        setPracticeLanguage(language);
+        setPracticeLevelState(level);
+      })();
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   if (!initialized) {
     return (
@@ -64,6 +94,28 @@ export default function ProfileScreen() {
               }}
             />
           )}
+        </GlassPanel>
+
+        <VoxaText variant="lead" style={styles.section}>
+          Practice difficulty
+        </VoxaText>
+        <GlassPanel style={styles.practiceCard}>
+          <View style={styles.practiceHeader}>
+            <View style={styles.practiceCopy}>
+              <VoxaText variant="caption" style={styles.cardLabel}>
+                {launchLanguageLabel(practiceLanguage)}
+              </VoxaText>
+              <VoxaText variant="lead">{practiceLevelLabel(practiceLevel)}</VoxaText>
+            </View>
+          </View>
+          <PracticeLevelPicker
+            value={practiceLevel}
+            onChange={(nextLevel) => {
+              setPracticeLevelState(nextLevel);
+              void setPreferredLevel(practiceLanguage, nextLevel);
+            }}
+            showDescriptions
+          />
         </GlassPanel>
 
         <VoxaText variant="lead" style={styles.section}>
@@ -155,6 +207,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.sm,
+  },
+  practiceCard: {
+    gap: spacing.md,
+  },
+  practiceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  practiceCopy: {
+    flex: 1,
   },
   section: {
     color: palette.textPrimary,
