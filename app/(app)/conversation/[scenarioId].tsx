@@ -206,7 +206,7 @@ function ConversationSessionActive({
       }
     }
     await startSession();
-  }, [userId, scenario, startSession]);
+  }, [learningPath, scenario, startSession, userId]);
 
   const onEnd = useCallback(async () => {
     setClosing(true);
@@ -222,6 +222,8 @@ function ConversationSessionActive({
       const xpEarned = hadTranscript ? XP_FOR_SESSION : 0;
       let review = fallbackSessionReview(scenario);
       let reviewCorrections: ChatCoachCorrection[] = [];
+      let reviewProviderUsed: string | null = null;
+      let reviewUsedFallback: boolean | null = null;
 
       if (hadTranscript) {
         try {
@@ -241,6 +243,8 @@ function ConversationSessionActive({
           );
           review = aiReview.review;
           reviewCorrections = aiReview.corrections;
+          reviewProviderUsed = aiReview.providerUsed ?? null;
+          reviewUsedFallback = aiReview.usedFallback ?? null;
         } catch (e) {
           console.warn('fetchSessionCoachReview', e);
         }
@@ -269,6 +273,8 @@ function ConversationSessionActive({
             summary,
             xpAwarded: xpEarned,
             status: 'completed',
+            aiProviderUsed: reviewProviderUsed,
+            aiUsedFallback: reviewUsedFallback,
           });
         } catch (e) {
           console.warn('completeConversation', e);
@@ -320,7 +326,7 @@ function ConversationSessionActive({
 
         <View style={styles.header}>
           <VoxaText variant="caption" style={styles.overline}>
-            Voice · Premium / experimental
+            Live voice practice
           </VoxaText>
           <VoxaText variant="title">{scenario.title}</VoxaText>
           <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
