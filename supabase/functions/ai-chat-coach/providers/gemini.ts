@@ -11,6 +11,10 @@ function parseCoachJson(raw: string): ChatCoachResponse {
   const reply = typeof parsed.reply === "string" ? parsed.reply : "";
   const encouragement = typeof parsed.encouragement === "string" ? parsed.encouragement : "";
   const correctionsRaw = Array.isArray(parsed.corrections) ? parsed.corrections : [];
+  const reviewRaw =
+    parsed.review && typeof parsed.review === "object" && !Array.isArray(parsed.review)
+      ? (parsed.review as Record<string, unknown>)
+      : null;
 
   const corrections = correctionsRaw
     .filter((c): c is Record<string, unknown> => c && typeof c === "object")
@@ -25,7 +29,28 @@ function parseCoachJson(raw: string): ChatCoachResponse {
     throw new Error("Gemini response missing reply");
   }
 
-  return { reply, corrections, encouragement: encouragement || "Nice effort — keep going." };
+  const review =
+    reviewRaw &&
+    typeof reviewRaw.headline === "string" &&
+    typeof reviewRaw.strength === "string" &&
+    typeof reviewRaw.focus === "string" &&
+    typeof reviewRaw.nextMission === "string" &&
+    typeof reviewRaw.suggestedScenarioId === "string"
+      ? {
+          headline: reviewRaw.headline.trim(),
+          strength: reviewRaw.strength.trim(),
+          focus: reviewRaw.focus.trim(),
+          nextMission: reviewRaw.nextMission.trim(),
+          suggestedScenarioId: reviewRaw.suggestedScenarioId.trim(),
+        }
+      : undefined;
+
+  return {
+    reply,
+    corrections,
+    encouragement: encouragement || "Nice effort — keep going.",
+    ...(review ? { review } : {}),
+  };
 }
 
 export async function callGeminiCoach(
@@ -49,7 +74,7 @@ export async function callGeminiCoach(
       contents,
       generationConfig: {
         temperature: 0.75,
-        maxOutputTokens: 1024,
+        maxOutputTokens: params.maxOutputTokens,
         responseMimeType: "application/json",
       },
     }),

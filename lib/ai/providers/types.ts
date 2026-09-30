@@ -12,10 +12,19 @@ export type ChatCoachCorrection = {
   explanation: string;
 };
 
+export type SessionCoachReview = {
+  headline: string;
+  strength: string;
+  focus: string;
+  nextMission: string;
+  suggestedScenarioId: string;
+};
+
 export type ChatCoachRequest = {
   scenarioId: string;
   learningPath: ApiLearningPath;
   userLevel: UserLevel;
+  mode?: 'practice' | 'review';
   messages: ChatCoachMessage[];
 };
 
@@ -23,6 +32,7 @@ export type ChatCoachResponse = {
   reply: string;
   corrections: ChatCoachCorrection[];
   encouragement: string;
+  review?: SessionCoachReview;
   /** Present when Edge Function includes `_meta.providerUsed`. */
   providerUsed?: string;
   /** Present when Edge Function includes `_meta.usedFallback`. */
@@ -34,4 +44,5 @@ export type AiProviderId = 'gemini' | 'groq';
 /** Params passed to server-side provider implementations (Edge Function only). */
 export type CoachProviderParams = ChatCoachRequest & {
   systemPrompt: string;
+  maxOutputTokens?: number;
 };

@@ -5,12 +5,14 @@ import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
 import type { Scenario } from '@/constants/scenarios';
 import { palette, radii, spacing } from '@/constants/theme';
+import type { PersonalizedMission } from '@/lib/practice/coachPlan';
 
 type Props = {
   scenario: Scenario;
   languageLabel: string;
   streak: number;
   completedToday: boolean;
+  personalizedMission?: PersonalizedMission | null;
   onStart: () => void;
 };
 
@@ -19,6 +21,7 @@ export function DailyCoachCard({
   languageLabel,
   streak,
   completedToday,
+  personalizedMission,
   onStart,
 }: Props) {
   return (
@@ -26,24 +29,30 @@ export function DailyCoachCard({
       <View style={styles.topRow}>
         <View>
           <VoxaText variant="caption" style={styles.overline}>
-            Today's mission
+            {personalizedMission ? 'Coach recommendation' : "Today's mission"}
           </VoxaText>
           <VoxaText variant="title" style={styles.title}>
-            {completedToday ? 'Keep the momentum going' : scenario.title}
+            {personalizedMission
+              ? personalizedMission.title
+              : completedToday
+                ? 'Keep the momentum going'
+                : scenario.title}
           </VoxaText>
         </View>
 
         <View style={[styles.statusPill, completedToday && styles.statusDone]}>
           <VoxaText variant="caption" style={styles.statusText}>
-            {completedToday ? 'Done today' : `${scenario.durationMin} min`}
+            {personalizedMission ? 'Personalized' : completedToday ? 'Done today' : `${scenario.durationMin} min`}
           </VoxaText>
         </View>
       </View>
 
       <VoxaText variant="body" style={styles.body}>
-        {completedToday
-          ? `You already practiced today. A second round can reinforce ${scenario.focus.toLowerCase()}.`
-          : scenario.mission}
+        {personalizedMission
+          ? personalizedMission.instruction
+          : completedToday
+            ? `You already practiced today. A second round can reinforce ${scenario.focus.toLowerCase()}.`
+            : scenario.mission}
       </VoxaText>
 
       <View style={styles.metaRow}>
@@ -51,7 +60,7 @@ export function DailyCoachCard({
           <VoxaText variant="caption">{languageLabel}</VoxaText>
         </View>
         <View style={styles.metaPill}>
-          <VoxaText variant="caption">{scenario.focus}</VoxaText>
+          <VoxaText variant="caption">{personalizedMission?.focus ?? scenario.focus}</VoxaText>
         </View>
         {streak > 0 ? (
           <View style={styles.metaPill}>
@@ -61,7 +70,7 @@ export function DailyCoachCard({
       </View>
 
       <VoxaButton
-        title={completedToday ? 'Practice again' : 'Start today’s mission'}
+        title={personalizedMission ? 'Practice coach recommendation' : completedToday ? 'Practice again' : 'Start today’s mission'}
         onPress={onStart}
         containerStyle={styles.cta}
       />
