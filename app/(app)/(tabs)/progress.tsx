@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CoachMemoryCard } from '@/components/progress/CoachMemoryCard';
 import { CorrectionMasterySnapshot } from '@/components/progress/CorrectionMasterySnapshot';
+import { WeeklyCoachPlanCard } from '@/components/progress/WeeklyCoachPlanCard';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -27,6 +28,11 @@ import {
   type CorrectionMasterySummary,
 } from '@/lib/progress/correctionMastery';
 import { getCoachLevel } from '@/lib/progress/levels';
+import {
+  loadWeeklyCoachPlan,
+  type WeeklyCoachPlan,
+  type WeeklyCoachPlanItem,
+} from '@/lib/progress/weeklyCoachPlan';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import { supabase } from '@/lib/supabase/client';
 import { useProgress } from '@/lib/progress/useProgress';
@@ -38,6 +44,7 @@ export default function ProgressScreen() {
   const [coachMemory, setCoachMemory] = useState<LearnerCoachMemory | null>(null);
   const [correctionMastery, setCorrectionMastery] =
     useState<CorrectionMasterySummary | null>(null);
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyCoachPlan | null>(null);
   const [memoryLanguage, setMemoryLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
 
   useFocusEffect(
@@ -49,6 +56,8 @@ export default function ProgressScreen() {
           if (active) {
             setCoachMemory(null);
             setCorrectionMastery(null);
+            setWeeklyPlan(null);
+            setWeeklyPlan(null);
           }
           return;
         }
@@ -56,7 +65,7 @@ export default function ProgressScreen() {
         try {
           const storedLanguage = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
           const learningPath = toApiLearningPath(storedLanguage);
-          const [rows, masteryData] = await Promise.all([
+          const [rows, masteryData, loadedWeeklyPlan] = await Promise.all([
             getRecentReviewedConversations(
               supabase,
               user.id,
@@ -69,11 +78,17 @@ export default function ProgressScreen() {
               learningPath,
               30,
             ),
+            loadWeeklyCoachPlan(
+              supabase,
+              user.id,
+              learningPath,
+            ),
           ]);
           if (!active) return;
           setMemoryLanguage(storedLanguage);
           setCoachMemory(buildLearnerCoachMemory(rows));
           setCorrectionMastery(buildCorrectionMastery(masteryData));
+          setWeeklyPlan(loadedWeeklyPlan);
         } catch (error) {
           console.warn('loadProgressCoaching', error);
           if (active) {
@@ -170,6 +185,24 @@ export default function ProgressScreen() {
             <VoxaText variant="muted">total XP</VoxaText>
           </GlassPanel>
         </View>
+
+        {user && weeklyPlan ? (
+          <>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              This week
+            </VoxaText>
+            <WeeklyCoachPlanCard
+              plan={weeklyPlan}
+              languageLabel={launchLanguageLabel(memoryLanguage)}
+              onStart={(item: WeeklyCoachPlanItem) =>
+                openScenarioPractice(item.scenarioId, memoryLanguage, {
+                  focus: item.focus,
+                  mission: item.mission,
+                })
+              }
+            />
+          </>
+        ) : null}
 
         {user && coachMemory ? (
           <>
