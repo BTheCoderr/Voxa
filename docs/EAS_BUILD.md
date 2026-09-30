@@ -153,15 +153,15 @@ Reference secrets in **eas.json** if you use `env` blocks per profile, or set th
 |----------|---------|
 | `EXPO_PUBLIC_SUPABASE_URL` | Auth + DB sync |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Auth + DB sync |
-| `EXPO_PUBLIC_AI_MODE` | `text` (default) or `voice` (premium) |
+| `EXPO_PUBLIC_AI_MODE` | `text` or `voice` |
 | `EXPO_PUBLIC_AI_CHAT_COACH_URL` | Groq/Gemini text coach Edge Function |
-| `EXPO_PUBLIC_ELEVENLABS_TTS_URL` | Optional “Hear this response” playback |
+| `EXPO_PUBLIC_ELEVENLABS_TTS_URL` | ElevenLabs “Hear this response” playback |
 
 Optional:
 
 | Variable | Purpose |
 |----------|---------|
-| `EXPO_PUBLIC_REALTIME_SESSION_URL` | OpenAI Realtime (voice mode only) |
+| `EXPO_PUBLIC_REALTIME_SESSION_URL` | OpenAI Realtime explicit URL override |
 | `EXPO_PUBLIC_POSTHOG_KEY` | Analytics |
 
 ---
