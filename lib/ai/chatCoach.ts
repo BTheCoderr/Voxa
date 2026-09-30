@@ -62,6 +62,9 @@ export async function fetchChatCoachReply(
       throw new Error('The AI coach is temporarily unavailable. Try again in a moment.');
     }
     if (res.status === 429) {
+      if (code === 'ai_daily_limit' && typeof err?.error === 'string') {
+        throw new Error(err.error);
+      }
       throw new Error('The AI coach is busy. Wait a few seconds and try again.');
     }
 
@@ -138,7 +141,11 @@ export async function fetchSessionCoachReview(
 ): Promise<ChatCoachResponse & { review: SessionCoachReview }> {
   const trimmedMessages = input.messages
     .filter((message) => message.content.trim())
-    .slice(-16);
+    .slice(-16)
+    .map((message) => ({
+      ...message,
+      content: message.content.trim().slice(0, 1400),
+    }));
 
   const result = await fetchChatCoachReply(
     {
