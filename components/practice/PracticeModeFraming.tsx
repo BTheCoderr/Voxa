@@ -10,9 +10,9 @@ export function PracticeModeFraming() {
     return (
       <GlassPanel style={styles.panel}>
         <ModeRow
-          badge="Premium"
+          badge="Live"
           title="Live Voice Practice"
-          body="Speak naturally — AI responds with voice in real time. Experimental."
+          body="Speak naturally — AI responds with voice in real time. Built for real conversation pressure."
           muted
         />
       </GlassPanel>
@@ -34,9 +34,9 @@ export function PracticeModeFraming() {
       />
       <View style={styles.divider} />
       <ModeRow
-        badge="Coming soon"
+        badge="Voice mode"
         title="Live Voice Practice"
-        body="Speak naturally and AI responds with voice in real time."
+        body="Full speech-to-speech practice is built into Voxa and can be enabled in supported release builds."
         muted
       />
     </GlassPanel>

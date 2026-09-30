@@ -3,36 +3,43 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
+import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
+import { DailyCoachCard } from '@/components/practice/DailyCoachCard';
 import { LanguagePathPicker } from '@/components/practice/LanguagePathPicker';
 import { PracticeModeFraming } from '@/components/practice/PracticeModeFraming';
 import { ScenarioCard } from '@/components/scenario/ScenarioCard';
-import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
-import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
+import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { SCENARIOS, type LaunchLanguage } from '@/constants/scenarios';
-import { spacing } from '@/constants/theme';
+import { palette, spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
 import { openScenarioPractice } from '@/lib/ai/openPractice';
 import { isTextPracticeMode, isVoicePracticeMode } from '@/lib/ai/mode';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import { isScreenshotMode } from '@/lib/presentation/screenshotMode';
 import { getPreferredLanguage, setPreferredLanguage } from '@/lib/preferences/storage';
+import { getDailyMission, wasActiveToday } from '@/lib/practice/dailyMission';
+import { getCoachLevel } from '@/lib/progress/levels';
+import { useProgress } from '@/lib/progress/useProgress';
 import { useFocusEffect } from '@react-navigation/native';
 
-export default function ScenariosHomeScreen() {
+export default function PracticeHomeScreen() {
   const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<LaunchLanguage | null | undefined>(undefined);
+  const { progress, progressHydrated, refresh } = useProgress();
 
   useFocusEffect(
     useCallback(() => {
       void (async () => {
         const stored = await getPreferredLanguage();
         setLanguage(stored ?? DEFAULT_LAUNCH_LANGUAGE);
+        await refresh();
       })();
-    }, []),
+    }, [refresh]),
   );
 
   const onLanguageChange = useCallback(async (lang: LaunchLanguage) => {
@@ -47,8 +54,25 @@ export default function ScenariosHomeScreen() {
     return SCENARIOS.filter((s) => s.languages.includes(effectiveLanguage));
   }, [effectiveLanguage]);
 
-  if (language === undefined) {
-    return <ScreenLoading message="Loading scenarios…" />;
+  const dailyMission = useMemo(() => getDailyMission(filtered), [filtered]);
+  const level = getCoachLevel(progress?.xp ?? 0);
+  const completedToday = wasActiveToday(progress?.lastDay);
+
+  const startScenario = useCallback(
+    (scenarioId: (typeof SCENARIOS)[number]['id'], source: 'daily_mission' | 'scenario_library') => {
+      trackEvent('scenario_selected', {
+        scenario_id: scenarioId,
+        mode: isVoicePracticeMode() ? 'voice' : 'text',
+        learning_path: effectiveLanguage,
+        source,
+      });
+      openScenarioPractice(scenarioId, effectiveLanguage);
+    },
+    [effectiveLanguage],
+  );
+
+  if (language === undefined || !progressHydrated) {
+    return <ScreenLoading message="Preparing your practice…" />;
   }
 
   return (
@@ -56,38 +80,97 @@ export default function ScenariosHomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xxl },
+          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxl },
         ]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.headerCopy}>
             <VoxaText variant="caption" style={styles.overline}>
-              {isVoicePracticeMode() ? 'Live voice · Premium' : 'Text practice · Low cost'}
+              Voxa Coach
             </VoxaText>
-            <VoxaText variant="title">Choose a scenario</VoxaText>
-            <VoxaText variant="body">
-              {isVoicePracticeMode()
-                ? 'Live voice practice — speak out loud. Experimental premium mode.'
-                : 'Start with text practice. Type or dictate — AI replies in text with gentle corrections.'}
+            <VoxaText variant="hero">Practice with a purpose.</VoxaText>
+            <VoxaText variant="body" style={styles.intro}>
+              Real conversations, small corrections, and one clear reason to speak today.
             </VoxaText>
-            <BetaDisclaimer compact />
           </View>
-          <Pressable onPress={() => router.push('/(app)/history')} style={styles.historyHit}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open conversation history"
+            onPress={() => router.push('/(app)/history')}
+            style={styles.historyHit}>
             <VoxaText variant="caption" style={styles.history}>
               History
             </VoxaText>
           </Pressable>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open progress"
+          onPress={() => router.push('/(app)/(tabs)/progress')}>
+          <GlassPanel style={styles.momentumStrip}>
+            <View style={styles.momentumRow}>
+              <View style={styles.momentumMetric}>
+                <VoxaText variant="caption">Level</VoxaText>
+                <VoxaText variant="lead" style={styles.metricValue}>
+                  {level.current.name}
+                </VoxaText>
+              </View>
+              <View style={styles.momentumDivider} />
+              <View style={styles.momentumMetric}>
+                <VoxaText variant="caption">Streak</VoxaText>
+                <VoxaText variant="lead" style={styles.metricValue}>
+                  {progress?.streak ?? 0}d
+                </VoxaText>
+              </View>
+              <View style={styles.momentumDivider} />
+              <View style={styles.momentumMetric}>
+                <VoxaText variant="caption">XP</VoxaText>
+                <VoxaText variant="lead" style={styles.metricValue}>
+                  {progress?.xp ?? 0}
+                </VoxaText>
+              </View>
+            </View>
+          </GlassPanel>
+        </Pressable>
+
+        {dailyMission ? (
+          <DailyCoachCard
+            scenario={dailyMission}
+            languageLabel={launchLanguageLabel(effectiveLanguage)}
+            streak={progress?.streak ?? 0}
+            completedToday={completedToday}
+            onStart={() => startScenario(dailyMission.id, 'daily_mission')}
+          />
+        ) : null}
+
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionCopy}>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Choose your lane
+            </VoxaText>
+            <VoxaText variant="muted">Switch language or practice path anytime.</VoxaText>
+          </View>
+        </View>
+
         <LanguagePathPicker value={effectiveLanguage} onChange={(lang) => void onLanguageChange(lang)} />
 
-        <VoxaText variant="caption" style={styles.pathHint}>
-          Practicing · {launchLanguageLabel(effectiveLanguage)}
-        </VoxaText>
-
         {!isScreenshotMode() && !isVoicePracticeMode() ? <PracticeModeFraming /> : null}
-
         {isScreenshotMode() ? <ScreenshotMarketingBanner /> : null}
+
+        <View style={styles.libraryHeader}>
+          <View>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Practice library
+            </VoxaText>
+            <VoxaText variant="caption" style={styles.pathHint}>
+              {launchLanguageLabel(effectiveLanguage)} · {filtered.length} scenarios
+            </VoxaText>
+          </View>
+          <VoxaText variant="caption" style={styles.modeLabel}>
+            {isVoicePracticeMode() ? 'Live voice' : 'Text + dictation'}
+          </VoxaText>
+        </View>
 
         {filtered.length === 0 ? (
           <View style={styles.emptyBlock}>
@@ -98,43 +181,34 @@ export default function ScenariosHomeScreen() {
             />
           </View>
         ) : (
-          <View style={{ marginTop: spacing.lg }}>
+          <View style={styles.library}>
             {filtered.map((scenario) => (
               <ScenarioCard
                 key={scenario.id}
                 scenario={scenario}
-                actionLabel={isVoicePracticeMode() ? 'Start voice practice' : 'Start text practice'}
-                badge={isVoicePracticeMode() ? undefined : 'Text'}
-                onPress={() => {
-                  trackEvent('scenario_selected', {
-                    scenario_id: scenario.id,
-                    mode: isVoicePracticeMode() ? 'voice' : 'text',
-                    learning_path: effectiveLanguage,
-                  });
-                  openScenarioPractice(scenario.id, effectiveLanguage);
-                }}
+                actionLabel={isVoicePracticeMode() ? 'Start voice practice' : 'Start practice'}
+                badge={isVoicePracticeMode() ? 'Voice' : undefined}
+                onPress={() => startScenario(scenario.id, 'scenario_library')}
               />
             ))}
           </View>
         )}
 
         {isTextPracticeMode() ? (
-          <Pressable
-            style={styles.premiumRow}
-            onPress={() => {
-              trackEvent('premium_voice_teaser_tapped');
-            }}>
-            <VoxaText variant="caption" style={styles.premiumBadge}>
-              Premium · Coming soon
+          <GlassPanel style={styles.voiceTeaser}>
+            <VoxaText variant="caption" style={styles.voiceOverline}>
+              Voice mode
             </VoxaText>
-            <VoxaText variant="body" style={styles.premiumTitle}>
-              Live Voice Practice
+            <VoxaText variant="lead" style={styles.voiceTitle}>
+              Want the pressure of a real conversation?
             </VoxaText>
             <VoxaText variant="muted">
-              Full speech-to-speech conversation — not available in text mode yet.
+              Voxa also supports full speech-to-speech practice when voice mode is enabled in the release build.
             </VoxaText>
-          </Pressable>
+          </GlassPanel>
         ) : null}
+
+        <BetaDisclaimer compact />
       </ScrollView>
     </GradientBackground>
   );
@@ -149,42 +223,94 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
   },
+  headerCopy: {
+    flex: 1,
+  },
   overline: {
+    color: palette.cyan,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
-  pathHint: {
+  intro: {
     marginTop: spacing.sm,
-    letterSpacing: 0.6,
-    opacity: 0.85,
+    maxWidth: 330,
   },
   historyHit: {
     paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 4,
+    paddingHorizontal: 8,
+    marginTop: 2,
   },
   history: {
-    color: '#38D9FF',
-    fontWeight: '600',
+    color: palette.cyan,
+    fontWeight: '700',
+  },
+  momentumStrip: {
+    marginTop: spacing.lg,
+  },
+  momentumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  momentumMetric: {
+    flex: 1,
+    gap: 2,
+  },
+  metricValue: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+  },
+  momentumDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 34,
+    backgroundColor: palette.frostStrong,
+  },
+  sectionHeader: {
+    marginTop: spacing.xxl,
+    marginBottom: spacing.sm,
+  },
+  sectionCopy: {
+    gap: 2,
+  },
+  sectionTitle: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+  },
+  libraryHeader: {
+    marginTop: spacing.xxl,
+    marginBottom: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: spacing.md,
+  },
+  pathHint: {
+    marginTop: 2,
+    opacity: 0.8,
+  },
+  modeLabel: {
+    color: palette.cyan,
+    fontWeight: '700',
   },
   emptyBlock: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
   },
-  premiumRow: {
-    marginTop: spacing.xl,
-    padding: spacing.md,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
-    gap: spacing.xs,
+  library: {
+    marginTop: spacing.xs,
   },
-  premiumBadge: {
-    letterSpacing: 1,
+  voiceTeaser: {
+    marginTop: spacing.sm,
+  },
+  voiceOverline: {
+    color: palette.cyan,
     textTransform: 'uppercase',
-    opacity: 0.75,
+    letterSpacing: 1.2,
+    marginBottom: spacing.xs,
   },
-  premiumTitle: {
-    fontWeight: '600',
+  voiceTitle: {
+    color: palette.textPrimary,
+    fontWeight: '700',
+    marginBottom: spacing.xs,
   },
 });
