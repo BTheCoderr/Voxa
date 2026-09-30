@@ -40,6 +40,7 @@ import {
 import {
   buildComebackNudge,
   dismissComebackNudgeToday,
+  getComebackNudgesEnabled,
   isComebackNudgeDismissedToday,
   type ComebackNudge,
 } from '@/lib/practice/comeback';
@@ -179,9 +180,12 @@ export default function PracticeHomeScreen() {
         return;
       }
 
-      const dismissed = await isComebackNudgeDismissedToday(comebackCandidate);
+      const [enabled, dismissed] = await Promise.all([
+        getComebackNudgesEnabled(),
+        isComebackNudgeDismissedToday(comebackCandidate),
+      ]);
       if (!active) return;
-      setVisibleComebackNudge(dismissed ? null : comebackCandidate);
+      setVisibleComebackNudge(enabled && !dismissed ? comebackCandidate : null);
     })();
 
     return () => {
