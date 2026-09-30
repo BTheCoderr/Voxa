@@ -8,6 +8,14 @@
 
 > **Practice real conversations out loud.**
 
+<!-- portfolio-visuals:start -->
+<p align="center">
+  <img src="./assets/images/icon.png" alt="Voxa app icon" width="150" />
+</p>
+
+<p align="center"><strong>Realtime speaking practice for work, travel, and everyday conversations.</strong></p>
+<!-- portfolio-visuals:end -->
+
 Voxa is designed for the conversations that are hard to rehearse alone: interviews, meetings, travel, networking, small talk, customer support, restaurants, and dating.
 
 Instead of turning speaking practice into another classroom-style lesson, Voxa puts the user inside a realistic scenario and gives lightweight coaching after they respond.
