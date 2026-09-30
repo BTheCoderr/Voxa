@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CorrectionChips } from '@/components/conversation/CorrectionChips';
 import { LiveTranscriptList } from '@/components/conversation/LiveTranscriptList';
 import { VoiceOrb } from '@/components/conversation/VoiceOrb';
+import { CoachRecap } from '@/components/practice/CoachRecap';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -15,6 +16,9 @@ import { VoxaText } from '@/components/ui/VoxaText';
 import type { Scenario, ScenarioId } from '@/constants/scenarios';
 import { getScenario } from '@/constants/scenarios';
 import { palette, spacing } from '@/constants/theme';
+import { fetchSessionCoachReview } from '@/lib/ai/chatCoach';
+import type { ChatCoachCorrection, SessionCoachReview } from '@/lib/ai/providers/types';
+import { fallbackSessionReview, sessionSummaryFromReview } from '@/lib/ai/sessionReview';
 import { trackEvent } from '@/lib/analytics/track';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
@@ -26,6 +30,7 @@ import {
 import { env } from '@/lib/env';
 import { DEFAULT_LAUNCH_LANGUAGE, parseApiLearningPath } from '@/lib/learningPath/display';
 import { getPreferredLanguage } from '@/lib/preferences/storage';
+import { savePersonalizedMission } from '@/lib/practice/coachPlan';
 import { useProgress } from '@/lib/progress/useProgress';
 import { toApiLearningPath, type ApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UseVoxaVoiceSessionParams } from '@/lib/realtime/useVoxaVoiceSession';
@@ -91,6 +96,8 @@ function ConversationSessionActive({
     xpEarned: number;
     correctionCount: number;
   } | null>(null);
+  const [sessionReview, setSessionReview] = useState<SessionCoachReview | null>(null);
+  const [sessionReviewCorrection, setSessionReviewCorrection] = useState<ChatCoachCorrection | null>(null);
 
   useEffect(() => {
     return () => {
@@ -172,13 +179,15 @@ function ConversationSessionActive({
     };
   }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist]);
 
-  const { phase, errorMessage, messages, corrections, sessionSummary, muted, startSession, endSession, toggleMute } =
+  const { phase, errorMessage, messages, corrections, muted, startSession, endSession, toggleMute } =
     useVoxaVoiceSession(voiceParams);
 
   const [closing, setClosing] = useState(false);
 
   const startWithPersistence = useCallback(async () => {
     setSessionStats(null);
+    setSessionReview(null);
+    setSessionReviewCorrection(null);
     conversationIdRef.current = null;
     if (env.supabaseConfigured) {
       try {
@@ -211,18 +220,53 @@ function ConversationSessionActive({
     try {
       const summaryResult = await endSession();
       const xpEarned = hadTranscript ? XP_FOR_SESSION : 0;
+      let review = fallbackSessionReview(scenario);
+      let reviewCorrections: ChatCoachCorrection[] = [];
+
+      if (hadTranscript) {
+        try {
+          const aiReview = await fetchSessionCoachReview(
+            {
+              scenarioId: scenario.id,
+              learningPath,
+              userLevel: 'intermediate',
+              messages: messages
+                .filter((message) => message.text.trim())
+                .map((message) => ({
+                  role: message.role,
+                  content: message.text,
+                })),
+            },
+            accessToken,
+          );
+          review = aiReview.review;
+          reviewCorrections = aiReview.corrections;
+        } catch (e) {
+          console.warn('fetchSessionCoachReview', e);
+        }
+      }
+
+      const summary = sessionSummaryFromReview(review);
+      setSessionReview(review);
+      setSessionReviewCorrection(reviewCorrections[0] ?? null);
       setSessionStats({
         durationSeconds: summaryResult.durationSeconds,
         xpEarned,
         correctionCount,
       });
 
+      try {
+        await savePersonalizedMission(review);
+      } catch (e) {
+        console.warn('savePersonalizedMission', e);
+      }
+
       if (env.supabaseConfigured && cid) {
         try {
           await completeConversation(supabase, {
             conversationId: cid,
             userId,
-            summary: summaryResult.summary,
+            summary,
             xpAwarded: xpEarned,
             status: 'completed',
           });
@@ -240,13 +284,14 @@ function ConversationSessionActive({
         correction_count: correctionCount,
         had_transcript: hadTranscript,
         xp_earned: xpEarned,
+        coach_review: Boolean(review),
       });
     } finally {
       setClosing(false);
     }
-  }, [addXpFromSession, corrections.length, endSession, messages.length, scenario.id, userId]);
+  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, userId]);
 
-  const showPostSummary = phase === 'ended' && sessionSummary;
+  const showPostSummary = phase === 'ended' && sessionReview && sessionStats;
   const busyStarting =
     phase === 'requesting_permission' || phase === 'minting_session' || phase === 'connecting' || closing;
   const live = phase === 'connected' || phase === 'listening' || phase === 'ai_speaking';
@@ -286,28 +331,22 @@ function ConversationSessionActive({
           <VoiceOrb phase={phase} />
         </View>
 
-        {showPostSummary ? (
-          <GlassPanel style={styles.panel}>
-            <VoxaText variant="caption" style={styles.recapLabel}>
-              Session recap
-            </VoxaText>
-            <VoxaText variant="lead">{sessionSummary}</VoxaText>
-            {sessionStats ? (
-              <View style={styles.recapStats}>
-                <VoxaText variant="body">Duration · {formatDuration(sessionStats.durationSeconds)}</VoxaText>
-                <VoxaText variant="body">XP earned · {sessionStats.xpEarned}</VoxaText>
-                <VoxaText variant="body">Gentle notes · {sessionStats.correctionCount}</VoxaText>
-              </View>
-            ) : null}
-            <BetaDisclaimer compact />
-            <VoxaButton
-              title="View history"
-              variant="ghost"
-              onPress={() => router.push('/(app)/history')}
-              containerStyle={styles.historyBtn}
-            />
-            <VoxaButton title="Done" onPress={() => router.back()} containerStyle={styles.primaryBtn} />
-          </GlassPanel>
+        {showPostSummary && sessionReview && sessionStats ? (
+          <CoachRecap
+            review={sessionReview}
+            correction={sessionReviewCorrection}
+            durationLabel={formatDuration(sessionStats.durationSeconds)}
+            xpEarned={sessionStats.xpEarned}
+            onPracticeNext={() => {
+              const next = getScenario(sessionReview.suggestedScenarioId as ScenarioId) ?? scenario;
+              router.replace({
+                pathname: '/(app)/conversation/[scenarioId]',
+                params: { scenarioId: next.id, path: learningPath },
+              });
+            }}
+            onHistory={() => router.push('/(app)/history')}
+            onDone={() => router.back()}
+          />
         ) : (
           <>
             <GlassPanel style={styles.panel}>
