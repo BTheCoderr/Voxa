@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenshotMarketingBanner } from '@/components/marketing/ScreenshotMarketingBanner';
 import { PolishedEmptyState } from '@/components/marketing/PolishedEmptyState';
+import { ComebackNudgeCard } from '@/components/practice/ComebackNudgeCard';
 import { DailyCoachCard } from '@/components/practice/DailyCoachCard';
 import { PracticeLevelPicker } from '@/components/practice/PracticeLevelPicker';
 import { WeeklyCoachPlanCard } from '@/components/progress/WeeklyCoachPlanCard';
@@ -36,6 +37,12 @@ import {
   loadPersonalizedMission,
   type PersonalizedMission,
 } from '@/lib/practice/coachPlan';
+import {
+  buildComebackNudge,
+  dismissComebackNudgeToday,
+  isComebackNudgeDismissedToday,
+  type ComebackNudge,
+} from '@/lib/practice/comeback';
 import { getDailyMission, wasActiveToday } from '@/lib/practice/dailyMission';
 import { buildLearnerCoachMemory } from '@/lib/progress/coachMemory';
 import { practiceLevelLabel } from '@/lib/progress/adaptiveDifficulty';
@@ -57,6 +64,8 @@ export default function PracticeHomeScreen() {
   const [personalizedMission, setPersonalizedMission] = useState<PersonalizedMission | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyCoachPlan | null>(null);
   const [practiceLevel, setPracticeLevel] = useState<UserLevel>('intermediate');
+  const [visibleComebackNudge, setVisibleComebackNudge] =
+    useState<ComebackNudge | null>(null);
   const { user } = useAuth();
   const { progress, progressHydrated, refresh } = useProgress();
 
@@ -150,6 +159,36 @@ export default function PracticeHomeScreen() {
   const level = getCoachLevel(progress?.xp ?? 0);
   const completedToday = wasActiveToday(progress?.lastDay);
 
+  const comebackCandidate = useMemo(
+    () =>
+      buildComebackNudge({
+        weeklyPlan,
+        streak: progress?.streak ?? 0,
+        lastActivityDay: progress?.lastDay,
+        fallbackScenarioId: coachMission?.id ?? null,
+      }),
+    [coachMission?.id, progress?.lastDay, progress?.streak, weeklyPlan],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      if (!comebackCandidate) {
+        if (active) setVisibleComebackNudge(null);
+        return;
+      }
+
+      const dismissed = await isComebackNudgeDismissedToday(comebackCandidate);
+      if (!active) return;
+      setVisibleComebackNudge(dismissed ? null : comebackCandidate);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [comebackCandidate]);
+
   const startScenario = useCallback(
     (
       scenarioId: (typeof SCENARIOS)[number]['id'],
@@ -228,6 +267,37 @@ export default function PracticeHomeScreen() {
             </View>
           </GlassPanel>
         </Pressable>
+
+        {visibleComebackNudge ? (
+          <ComebackNudgeCard
+            nudge={visibleComebackNudge}
+            onStart={() => {
+              trackEvent('comeback_nudge_started', {
+                kind: visibleComebackNudge.kind,
+                scenario_id: visibleComebackNudge.scenarioId,
+                week_key: visibleComebackNudge.weekKey,
+                learning_path: effectiveLanguage,
+              });
+              openScenarioPractice(
+                visibleComebackNudge.scenarioId,
+                effectiveLanguage,
+                {
+                  focus: visibleComebackNudge.focus,
+                  mission: visibleComebackNudge.mission,
+                },
+              );
+            }}
+            onDismiss={() => {
+              trackEvent('comeback_nudge_dismissed', {
+                kind: visibleComebackNudge.kind,
+                week_key: visibleComebackNudge.weekKey,
+                learning_path: effectiveLanguage,
+              });
+              void dismissComebackNudgeToday(visibleComebackNudge);
+              setVisibleComebackNudge(null);
+            }}
+          />
+        ) : null}
 
         {coachMission ? (
           <DailyCoachCard
