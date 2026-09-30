@@ -15,12 +15,22 @@ type Props = {
 
 export function ScenarioCard({ scenario, onPress, actionLabel, badge }: Props) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${scenario.title}, ${scenario.durationMin} minutes, ${scenario.difficulty}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
       <GlassPanel style={styles.card}>
         <View style={styles.topRow}>
-          <VoxaText variant="title" style={styles.title}>
-            {scenario.title}
-          </VoxaText>
+          <View style={styles.heading}>
+            <VoxaText variant="caption" style={styles.focus}>
+              {scenario.focus}
+            </VoxaText>
+            <VoxaText variant="title" style={styles.title}>
+              {scenario.title}
+            </VoxaText>
+          </View>
+
           <View style={styles.pillRow}>
             {badge ? (
               <View style={[styles.pill, styles.badgePill]}>
@@ -36,12 +46,19 @@ export function ScenarioCard({ scenario, onPress, actionLabel, badge }: Props) {
             </View>
           </View>
         </View>
+
         <VoxaText variant="body">{scenario.subtitle}</VoxaText>
-        {actionLabel ? (
-          <VoxaText variant="caption" style={styles.action}>
-            {actionLabel} →
+
+        <View style={styles.footerRow}>
+          <VoxaText variant="caption" style={styles.difficulty}>
+            {scenario.difficulty}
           </VoxaText>
-        ) : null}
+          {actionLabel ? (
+            <VoxaText variant="caption" style={styles.action}>
+              {actionLabel} →
+            </VoxaText>
+          ) : null}
+        </View>
       </GlassPanel>
     </Pressable>
   );
@@ -65,8 +82,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  title: {
+  heading: {
     flex: 1,
+    gap: 2,
+  },
+  focus: {
+    color: palette.cyan,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  title: {
     fontSize: 20,
   },
   pill: {
@@ -89,10 +115,20 @@ const styles = StyleSheet.create({
     color: palette.cyan,
     fontWeight: '700',
   },
-  action: {
+  footerRow: {
     marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  difficulty: {
+    opacity: 0.72,
+  },
+  action: {
     color: palette.cyan,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'right',
   },
   pillText: {
     color: palette.textSecondary,
