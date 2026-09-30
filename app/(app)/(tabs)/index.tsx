@@ -65,6 +65,7 @@ export default function PracticeHomeScreen() {
   const [personalizedMission, setPersonalizedMission] = useState<PersonalizedMission | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyCoachPlan | null>(null);
   const [practiceLevel, setPracticeLevel] = useState<UserLevel>('intermediate');
+  const [coachNudgesEnabled, setCoachNudgesEnabled] = useState(true);
   const [visibleComebackNudge, setVisibleComebackNudge] =
     useState<ComebackNudge | null>(null);
   const { user } = useAuth();
@@ -73,9 +74,10 @@ export default function PracticeHomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void (async () => {
-        const [stored, localPlan] = await Promise.all([
+        const [stored, localPlan, nudgesEnabled] = await Promise.all([
           getPreferredLanguage(),
           loadPersonalizedMission(),
+          getComebackNudgesEnabled(),
         ]);
         const selectedLanguage = stored ?? DEFAULT_LAUNCH_LANGUAGE;
         const selectedLevel = await getPreferredLevel(selectedLanguage);
@@ -111,6 +113,7 @@ export default function PracticeHomeScreen() {
 
         setLanguage(selectedLanguage);
         setPracticeLevel(selectedLevel);
+        setCoachNudgesEnabled(nudgesEnabled);
         setPersonalizedMission(resolvedPlan);
         await refresh();
       })();
@@ -180,18 +183,20 @@ export default function PracticeHomeScreen() {
         return;
       }
 
-      const [enabled, dismissed] = await Promise.all([
-        getComebackNudgesEnabled(),
-        isComebackNudgeDismissedToday(comebackCandidate),
-      ]);
+      if (!coachNudgesEnabled) {
+        if (active) setVisibleComebackNudge(null);
+        return;
+      }
+
+      const dismissed = await isComebackNudgeDismissedToday(comebackCandidate);
       if (!active) return;
-      setVisibleComebackNudge(enabled && !dismissed ? comebackCandidate : null);
+      setVisibleComebackNudge(dismissed ? null : comebackCandidate);
     })();
 
     return () => {
       active = false;
     };
-  }, [comebackCandidate]);
+  }, [coachNudgesEnabled, comebackCandidate]);
 
   const startScenario = useCallback(
     (
