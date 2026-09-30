@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Alert, ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
@@ -27,7 +27,12 @@ export default function ProfileScreen() {
 
   return (
     <GradientBackground>
-      <View style={[styles.container, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl }]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}>
         <VoxaText variant="caption" style={styles.overline}>
           Voxa
         </VoxaText>
@@ -87,7 +92,7 @@ export default function ProfileScreen() {
             Diagnostics
           </VoxaText>
         </Pressable>
-      </View>
+      </ScrollView>
     </GradientBackground>
   );
 }
@@ -122,6 +127,10 @@ function ProfileLink({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: spacing.xl,
   },
   centered: {
