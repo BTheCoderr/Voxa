@@ -40,6 +40,7 @@ const DEFAULT_AI_MAX_OUTPUT_TOKENS = 1024;
 type LearningPath = "business_english" | "spanish" | "mandarin";
 type UserLevel = "beginner" | "intermediate" | "advanced";
 type ProviderName = "gemini" | "groq";
+type CoachMode = "practice" | "review";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -47,6 +48,7 @@ type CoachRequest = {
   scenarioId: string;
   learningPath: LearningPath;
   userLevel: UserLevel;
+  mode: CoachMode;
   messages: ChatMessage[];
 };
 
@@ -91,6 +93,7 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
   const scenarioId = o.scenarioId;
   const learningPath = o.learningPath;
   const userLevel = o.userLevel;
+  const mode = o.mode;
   const messages = o.messages;
 
   if (typeof scenarioId !== "string" || !scenarioId.trim()) {
@@ -105,6 +108,9 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
     throw new ValidationError(
       "`userLevel` must be one of: beginner | intermediate | advanced",
     );
+  }
+  if (mode !== undefined && mode !== "practice" && mode !== "review") {
+    throw new ValidationError("`mode` must be practice or review");
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new ValidationError("`messages` must be a non-empty array");
@@ -132,6 +138,7 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
     scenarioId: scenarioId.trim(),
     learningPath: learningPath as LearningPath,
     userLevel: userLevel as UserLevel,
+    mode: (mode === "review" ? "review" : "practice") as CoachMode,
     messages: normalized,
   };
 }
@@ -326,7 +333,7 @@ Deno.serve(async (req) => {
     return errorResponse(AI_DAILY_LIMIT_MESSAGE, 429, "ai_daily_limit");
   }
 
-  if (isNewSessionStart(body.messages)) {
+  if (body.mode === "practice" && isNewSessionStart(body.messages)) {
     const completedSessions = await getCompletedSessionsToday(userId);
     if (completedSessions === null) {
       return errorResponse(
@@ -353,6 +360,7 @@ Deno.serve(async (req) => {
     userId,
     scenarioId: body.scenarioId,
     learningPath: body.learningPath,
+    mode: body.mode,
     messageCountToday: messageCount,
     userMessagesInPayload: body.messages.filter((m) => m.role === "user").length,
     inputChars: lastUserMessage?.content.length ?? 0,
@@ -362,6 +370,7 @@ Deno.serve(async (req) => {
     body.scenarioId,
     body.learningPath,
     body.userLevel,
+    body.mode,
   );
 
   try {
@@ -375,6 +384,7 @@ Deno.serve(async (req) => {
       event: "ai_coach_success",
       userId,
       scenarioId: body.scenarioId,
+      mode: body.mode,
       providerUsed,
       usedFallback,
       messageCountAfter: messageCount + 1,
