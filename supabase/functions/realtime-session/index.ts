@@ -135,11 +135,23 @@ function languageBrief(path: LearningPath): string {
 function levelBrief(level: UserLevel): string {
   switch (level) {
     case "beginner":
-      return "Learner level: **beginner**. Keep turns shorter, speak clearly, celebrate effort, and scaffold with gentle prompts. Offer optional phrases they can repeat.";
+      return [
+        "Learner level: **beginner**.",
+        "Use short turns, high-frequency vocabulary, clear pacing, and one question at a time.",
+        "Pause naturally for answers, scaffold with an optional phrase they can repeat, and keep corrections to one useful tweak at a time.",
+      ].join(" ");
     case "intermediate":
-      return "Learner level: **intermediate**. Natural pace, richer vocabulary, occasional compact coaching.";
+      return [
+        "Learner level: **intermediate**.",
+        "Use a natural pace, richer vocabulary, and follow-ups that ask the learner to explain or clarify.",
+        "Give compact coaching without interrupting the flow; correct selectively rather than after every turn.",
+      ].join(" ");
     case "advanced":
-      return "Learner level: **advanced**. Speak at a natural native-like pace; emphasize nuance, idioms, and cultural tone.";
+      return [
+        "Learner level: **advanced**.",
+        "Use native-like pace, precise vocabulary, nuance, idioms, and realistic ambiguity when appropriate.",
+        "Challenge the learner to elaborate, rephrase, disagree, recover, or handle subtle tone; prioritize high-level naturalness over basic scaffolding.",
+      ].join(" ");
   }
 }
 
