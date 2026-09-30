@@ -8,6 +8,7 @@ import { CorrectionChips } from '@/components/conversation/CorrectionChips';
 import { LiveTranscriptList } from '@/components/conversation/LiveTranscriptList';
 import { VoiceOrb } from '@/components/conversation/VoiceOrb';
 import { CoachRecap } from '@/components/practice/CoachRecap';
+import { PracticeFocusCard } from '@/components/practice/PracticeFocusCard';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -78,6 +79,8 @@ type ConversationSessionActiveProps = {
   userId: string;
   accessToken: string;
   learningPath: ApiLearningPath;
+  coachingFocus?: string;
+  coachingMission?: string;
 };
 
 function ConversationSessionActive({
@@ -85,9 +88,12 @@ function ConversationSessionActive({
   userId,
   accessToken,
   learningPath,
+  coachingFocus,
+  coachingMission,
 }: ConversationSessionActiveProps) {
   const insets = useSafeAreaInsets();
   const { addXpFromSession } = useProgress();
+  const sessionGoal = coachingMission?.trim() || coachingFocus?.trim() || undefined;
 
   const conversationIdRef = useRef<string | null>(null);
   const messageTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -174,10 +180,11 @@ function ConversationSessionActive({
       learningPath,
       userLevel: 'intermediate',
       authToken: accessToken,
+      coachingGoal: sessionGoal,
       onTranscriptPersist,
       onCorrectionPersist,
     };
-  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist]);
+  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist, sessionGoal]);
 
   const { phase, errorMessage, messages, corrections, muted, startSession, endSession, toggleMute } =
     useVoxaVoiceSession(voiceParams);
@@ -232,6 +239,7 @@ function ConversationSessionActive({
               scenarioId: scenario.id,
               learningPath,
               userLevel: 'intermediate',
+              sessionGoal,
               messages: messages
                 .filter((message) => message.text.trim())
                 .map((message) => ({
@@ -296,7 +304,7 @@ function ConversationSessionActive({
     } finally {
       setClosing(false);
     }
-  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, userId]);
+  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, sessionGoal, userId]);
 
   const showPostSummary = phase === 'ended' && sessionReview && sessionStats;
   const busyStarting =
@@ -333,6 +341,8 @@ function ConversationSessionActive({
           <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
           <BetaDisclaimer compact />
         </View>
+
+        <PracticeFocusCard focus={coachingFocus} mission={coachingMission} />
 
         <View style={styles.orb}>
           <VoiceOrb phase={phase} />
@@ -412,7 +422,12 @@ function ConversationSessionActive({
 }
 
 export default function ConversationScreen() {
-  const params = useLocalSearchParams<{ scenarioId: string; path?: string }>();
+  const params = useLocalSearchParams<{
+    scenarioId: string;
+    path?: string;
+    focus?: string;
+    mission?: string;
+  }>();
   const scenario = useMemo(() => getScenario(params.scenarioId as ScenarioId), [params.scenarioId]);
   const { session, user } = useAuth();
   const [learningPath, setLearningPath] = useState<ApiLearningPath | null>(null);
@@ -475,6 +490,8 @@ export default function ConversationScreen() {
       userId={user.id}
       accessToken={session.access_token}
       learningPath={learningPath}
+      coachingFocus={typeof params.focus === 'string' ? params.focus : undefined}
+      coachingMission={typeof params.mission === 'string' ? params.mission : undefined}
     />
   );
 }
