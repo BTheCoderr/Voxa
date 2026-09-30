@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdaptiveDifficultyCard } from '@/components/progress/AdaptiveDifficultyCard';
 import { CoachMemoryCard } from '@/components/progress/CoachMemoryCard';
 import { CorrectionMasterySnapshot } from '@/components/progress/CorrectionMasterySnapshot';
+import { ProgressTrendsSnapshot } from '@/components/progress/ProgressTrendsSnapshot';
 import { WeeklyCoachPlanCard } from '@/components/progress/WeeklyCoachPlanCard';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -20,6 +21,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import {
   getAdaptiveDifficultyData,
   getCorrectionMasteryData,
+  getProgressTrendData,
   getRecentReviewedConversations,
   type AdaptiveDifficultyData,
 } from '@/lib/db/conversations';
@@ -39,6 +41,10 @@ import {
   type CorrectionMasterySummary,
 } from '@/lib/progress/correctionMastery';
 import { getCoachLevel } from '@/lib/progress/levels';
+import {
+  buildProgressTrends,
+  type ProgressTrendSummary,
+} from '@/lib/progress/progressTrends';
 import {
   loadWeeklyCoachPlan,
   type WeeklyCoachPlan,
@@ -61,6 +67,7 @@ export default function ProgressScreen() {
   const [difficultyRecommendation, setDifficultyRecommendation] =
     useState<DifficultyRecommendation | null>(null);
   const [practiceLevel, setPracticeLevelState] = useState<UserLevel>('intermediate');
+  const [progressTrends, setProgressTrends] = useState<ProgressTrendSummary | null>(null);
   const [memoryLanguage, setMemoryLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
 
   useFocusEffect(
@@ -75,9 +82,7 @@ export default function ProgressScreen() {
             setWeeklyPlan(null);
             setAdaptiveData(null);
             setDifficultyRecommendation(null);
-            setWeeklyPlan(null);
-            setAdaptiveData(null);
-            setDifficultyRecommendation(null);
+            setProgressTrends(null);
           }
           return;
         }
@@ -86,7 +91,7 @@ export default function ProgressScreen() {
           const storedLanguage = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
           const selectedLevel = await getPreferredLevel(storedLanguage);
           const learningPath = toApiLearningPath(storedLanguage);
-          const [rows, masteryData, loadedWeeklyPlan, loadedAdaptiveData] = await Promise.all([
+          const [rows, masteryData, loadedWeeklyPlan, loadedAdaptiveData, loadedTrendData] = await Promise.all([
             getRecentReviewedConversations(
               supabase,
               user.id,
@@ -110,6 +115,12 @@ export default function ProgressScreen() {
               learningPath,
               8,
             ),
+            getProgressTrendData(
+              supabase,
+              user.id,
+              learningPath,
+              10,
+            ),
           ]);
           if (!active) return;
           setMemoryLanguage(storedLanguage);
@@ -121,11 +132,16 @@ export default function ProgressScreen() {
           setDifficultyRecommendation(
             buildDifficultyRecommendation(loadedAdaptiveData, selectedLevel),
           );
+          setProgressTrends(buildProgressTrends(loadedTrendData));
         } catch (error) {
           console.warn('loadProgressCoaching', error);
           if (active) {
             setCoachMemory(null);
             setCorrectionMastery(null);
+            setWeeklyPlan(null);
+            setAdaptiveData(null);
+            setDifficultyRecommendation(null);
+            setProgressTrends(null);
           }
         }
       })();
@@ -217,6 +233,18 @@ export default function ProgressScreen() {
             <VoxaText variant="muted">total XP</VoxaText>
           </GlassPanel>
         </View>
+
+        {user && progressTrends ? (
+          <>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Progress trends
+            </VoxaText>
+            <ProgressTrendsSnapshot
+              trends={progressTrends}
+              onOpen={() => router.push('/(app)/trends')}
+            />
+          </>
+        ) : null}
 
         {user && difficultyRecommendation ? (
           <>
