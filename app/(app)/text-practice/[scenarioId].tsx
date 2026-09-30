@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TextCorrectionCards } from '@/components/conversation/TextCorrectionCards';
 import { TextMessageList, type TextChatMessage } from '@/components/conversation/TextMessageList';
+import { CoachRecap } from '@/components/practice/CoachRecap';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -23,8 +24,9 @@ import { VoxaText } from '@/components/ui/VoxaText';
 import type { Scenario, ScenarioId } from '@/constants/scenarios';
 import { getScenario } from '@/constants/scenarios';
 import { palette, spacing } from '@/constants/theme';
-import { fetchChatCoachReply } from '@/lib/ai/chatCoach';
-import type { ChatCoachCorrection } from '@/lib/ai/providers/types';
+import { fetchChatCoachReply, fetchSessionCoachReview } from '@/lib/ai/chatCoach';
+import type { ChatCoachCorrection, SessionCoachReview } from '@/lib/ai/providers/types';
+import { fallbackSessionReview, sessionSummaryFromReview } from '@/lib/ai/sessionReview';
 import { trackEvent } from '@/lib/analytics/track';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
@@ -40,6 +42,7 @@ import {
   textPracticeOverline,
 } from '@/lib/learningPath/display';
 import { getPreferredLanguage } from '@/lib/preferences/storage';
+import { savePersonalizedMission } from '@/lib/practice/coachPlan';
 import { useProgress } from '@/lib/progress/useProgress';
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
@@ -91,6 +94,9 @@ function TextSessionActive({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [sessionSummary, setSessionSummary] = useState<string | null>(null);
+  const [sessionReview, setSessionReview] = useState<SessionCoachReview | null>(null);
+  const [sessionReviewCorrection, setSessionReviewCorrection] = useState<ChatCoachCorrection | null>(null);
+  const [reviewing, setReviewing] = useState(false);
   const [sessionStats, setSessionStats] = useState<{
     durationSeconds: number;
     xpEarned: number;
@@ -111,6 +117,7 @@ function TextSessionActive({
 
   const conversationIdRef = useRef<string | null>(null);
   const correctionCountRef = useRef(0);
+  const sessionCorrectionsRef = useRef<ChatCoachCorrection[]>([]);
   const sessionEndedRef = useRef(false);
   const lastAiMetaRef = useRef<{ providerUsed?: string; usedFallback?: boolean }>({});
 
@@ -184,6 +191,8 @@ function TextSessionActive({
   const startSession = useCallback(async () => {
     setErrorMessage(null);
     setSessionSummary(null);
+    setSessionReview(null);
+    setSessionReviewCorrection(null);
     setSessionStats(null);
     setMessages([]);
     setLatestCorrections([]);
@@ -191,6 +200,7 @@ function TextSessionActive({
     setLatestAssistantText('');
     setTtsError(null);
     correctionCountRef.current = 0;
+    sessionCorrectionsRef.current = [];
     conversationIdRef.current = null;
     sessionEndedRef.current = false;
     lastAiMetaRef.current = {};
@@ -245,6 +255,7 @@ function TextSessionActive({
       setLatestEncouragement(result.encouragement);
       setLatestAssistantText(result.reply);
       correctionCountRef.current += result.corrections.length;
+      sessionCorrectionsRef.current = [...sessionCorrectionsRef.current, ...result.corrections].slice(-12);
       lastAiMetaRef.current = {
         providerUsed: result.providerUsed,
         usedFallback: result.usedFallback,
@@ -326,18 +337,54 @@ function TextSessionActive({
   const endSession = useCallback(async () => {
     if (sessionEndedRef.current) return;
     sessionEndedRef.current = true;
+    setReviewing(true);
 
     const hadMessages = messages.length > 0;
     const durationSeconds = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : 0;
     const xpEarned = hadMessages ? XP_FOR_SESSION : 0;
     const correctionCount = correctionCountRef.current;
     const cid = conversationIdRef.current;
+    let review = fallbackSessionReview(scenario, sessionCorrectionsRef.current);
+    let recapCorrections = sessionCorrectionsRef.current;
 
-    const summary = `You completed a text practice in “${scenario.title}”. Steady reps build calm, confident speaking.`;
+    if (hadMessages) {
+      try {
+        const aiReview = await fetchSessionCoachReview(
+          {
+            scenarioId: scenario.id,
+            learningPath,
+            userLevel: USER_LEVEL,
+            messages: messages.map((message) => ({
+              role: message.role,
+              content: message.text,
+            })),
+          },
+          accessToken,
+        );
+        review = aiReview.review;
+        if (aiReview.corrections.length > 0) recapCorrections = aiReview.corrections;
+        lastAiMetaRef.current = {
+          providerUsed: aiReview.providerUsed,
+          usedFallback: aiReview.usedFallback,
+        };
+      } catch (e) {
+        console.warn('fetchSessionCoachReview', e);
+      }
+    }
+
+    const summary = sessionSummaryFromReview(review);
     setSessionSummary(summary);
+    setSessionReview(review);
+    setSessionReviewCorrection(recapCorrections[0] ?? null);
     setSessionStats({ durationSeconds, xpEarned, correctionCount });
     setSessionActive(false);
     setStartedAt(null);
+
+    try {
+      await savePersonalizedMission(review);
+    } catch (e) {
+      console.warn('savePersonalizedMission', e);
+    }
 
     if (env.supabaseConfigured && cid) {
       try {
@@ -365,10 +412,12 @@ function TextSessionActive({
       correction_count: correctionCount,
       message_count: messages.length,
       xp_earned: xpEarned,
+      coach_review: Boolean(review),
     });
-  }, [addXpFromSession, messages.length, scenario, startedAt, userId]);
+    setReviewing(false);
+  }, [accessToken, addXpFromSession, learningPath, messages, scenario, startedAt, userId]);
 
-  const showRecap = sessionSummary !== null;
+  const showRecap = sessionSummary !== null && sessionReview !== null;
 
   return (
     <GradientBackground>
@@ -414,22 +463,22 @@ function TextSessionActive({
             <BetaDisclaimer compact />
           </View>
 
-          {showRecap ? (
-            <GlassPanel style={styles.panel}>
-              <VoxaText variant="caption" style={styles.recapLabel}>
-                Session recap
-              </VoxaText>
-              <VoxaText variant="lead">{sessionSummary}</VoxaText>
-              {sessionStats ? (
-                <View style={styles.recapStats}>
-                  <VoxaText variant="body">Duration · {formatDuration(sessionStats.durationSeconds)}</VoxaText>
-                  <VoxaText variant="body">XP earned · {sessionStats.xpEarned}</VoxaText>
-                  <VoxaText variant="body">Gentle notes · {sessionStats.correctionCount}</VoxaText>
-                </View>
-              ) : null}
-              <VoxaButton title="View history" variant="ghost" onPress={() => router.push('/(app)/history')} />
-              <VoxaButton title="Done" onPress={() => router.back()} containerStyle={styles.gap} />
-            </GlassPanel>
+          {showRecap && sessionReview && sessionStats ? (
+            <CoachRecap
+              review={sessionReview}
+              correction={sessionReviewCorrection}
+              durationLabel={formatDuration(sessionStats.durationSeconds)}
+              xpEarned={sessionStats.xpEarned}
+              onPracticeNext={() => {
+                const next = getScenario(sessionReview.suggestedScenarioId as ScenarioId) ?? scenario;
+                router.replace({
+                  pathname: '/(app)/text-practice/[scenarioId]',
+                  params: { scenarioId: next.id, path: learningPath },
+                });
+              }}
+              onHistory={() => router.push('/(app)/history')}
+              onDone={() => router.back()}
+            />
           ) : (
             <>
               {!sessionActive ? (
@@ -504,7 +553,12 @@ function TextSessionActive({
                         containerStyle={styles.sendBtn}
                       />
                     </View>
-                    <VoxaButton title="Finish session" variant="ghost" onPress={() => void endSession()} />
+                    <VoxaButton
+                      title={reviewing ? 'Building your recap…' : 'Finish session'}
+                      variant="ghost"
+                      disabled={reviewing}
+                      onPress={() => void endSession()}
+                    />
                   </View>
                 </View>
               )}
