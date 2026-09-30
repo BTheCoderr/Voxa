@@ -1,5 +1,10 @@
 import { env } from '@/lib/env';
-import type { ChatCoachRequest, ChatCoachResponse } from '@/lib/ai/providers/types';
+import type {
+  ChatCoachMessage,
+  ChatCoachRequest,
+  ChatCoachResponse,
+  SessionCoachReview,
+} from '@/lib/ai/providers/types';
 
 type ErrorBody = { error?: string; code?: string };
 
@@ -70,6 +75,10 @@ export async function fetchChatCoachReply(
   const reply = json.reply;
   const encouragement = json.encouragement;
   const corrections = json.corrections;
+  const reviewRaw =
+    json.review && typeof json.review === 'object' && !Array.isArray(json.review)
+      ? (json.review as Record<string, unknown>)
+      : null;
 
   if (typeof reply !== 'string' || !reply) {
     throw new Error('Response missing `reply`.');
@@ -86,10 +95,27 @@ export async function fetchChatCoachReply(
         .filter((c) => c.original || c.improved)
     : [];
 
+  const review =
+    reviewRaw &&
+    typeof reviewRaw.headline === 'string' &&
+    typeof reviewRaw.strength === 'string' &&
+    typeof reviewRaw.focus === 'string' &&
+    typeof reviewRaw.nextMission === 'string' &&
+    typeof reviewRaw.suggestedScenarioId === 'string'
+      ? {
+          headline: reviewRaw.headline.trim(),
+          strength: reviewRaw.strength.trim(),
+          focus: reviewRaw.focus.trim(),
+          nextMission: reviewRaw.nextMission.trim(),
+          suggestedScenarioId: reviewRaw.suggestedScenarioId.trim(),
+        }
+      : undefined;
+
   return {
     reply,
     corrections: parsedCorrections,
     encouragement: typeof encouragement === 'string' ? encouragement : '',
+    ...(review ? { review } : {}),
     providerUsed:
       typeof json._meta === 'object' &&
       json._meta &&
@@ -103,4 +129,29 @@ export async function fetchChatCoachReply(
         ? ((json._meta as Record<string, unknown>).usedFallback as boolean)
         : undefined,
   };
+}
+
+
+export async function fetchSessionCoachReview(
+  input: Omit<ChatCoachRequest, 'mode' | 'messages'> & { messages: ChatCoachMessage[] },
+  authToken: string,
+): Promise<ChatCoachResponse & { review: SessionCoachReview }> {
+  const trimmedMessages = input.messages
+    .filter((message) => message.content.trim())
+    .slice(-16);
+
+  const result = await fetchChatCoachReply(
+    {
+      ...input,
+      mode: 'review',
+      messages: trimmedMessages,
+    },
+    authToken,
+  );
+
+  if (!result.review) {
+    throw new Error('Coach review was not available for this session.');
+  }
+
+  return { ...result, review: result.review };
 }
