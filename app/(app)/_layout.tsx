@@ -39,6 +39,16 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="mastery"
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          headerTransparent: true,
+          headerTitle: '',
+          headerTintColor: '#F4F7FF',
+        }}
+      />
+      <Stack.Screen
         name="debug-health"
         options={{
           presentation: 'modal',
