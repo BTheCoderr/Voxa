@@ -20,7 +20,7 @@ export function getCoachLevel(xpRaw: number): {
   remainingXp: number;
 } {
   const xp = Math.max(0, Math.floor(xpRaw || 0));
-  let current = LEVELS[0];
+  let current: CoachLevel = LEVELS[0]!;
 
   for (const level of LEVELS) {
     if (xp >= level.minXp) current = level;
