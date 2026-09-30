@@ -153,7 +153,7 @@ function TextSessionActive({
       Alert.alert('Could not start', 'We could not create your session record. Check your connection.');
       return false;
     }
-  }, [userId, scenario, learningPath]);
+  }, [userId, scenario, learningPath, userLevel]);
 
   const persistMessage = useCallback(
     async (role: 'user' | 'assistant', text: string, clientMessageId: string) => {
@@ -294,6 +294,7 @@ function TextSessionActive({
     learningPath,
     accessToken,
     sessionGoal,
+    userLevel,
   ]);
 
   const playAssistantVoice = useCallback(async () => {
@@ -432,7 +433,7 @@ function TextSessionActive({
       coach_review: Boolean(review),
     });
     setReviewing(false);
-  }, [accessToken, addXpFromSession, learningPath, messages, scenario, sessionGoal, startedAt, userId]);
+  }, [accessToken, addXpFromSession, learningPath, messages, scenario, sessionGoal, startedAt, userId, userLevel]);
 
   const showRecap = sessionSummary !== null && sessionReview !== null;
 
