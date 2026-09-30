@@ -32,6 +32,7 @@ export type UseVoxaVoiceSessionParams = {
   learningPath: ApiLearningPath;
   userLevel: UserLevel;
   authToken: string;
+  coachingGoal?: string;
   /** Optional: debounce / persist in the caller (e.g. Supabase). */
   onTranscriptPersist?: (payload: TranscriptPersistPayload) => void;
   onCorrectionPersist?: (snippet: string) => void;
@@ -347,6 +348,7 @@ export function useVoxaVoiceSession(params: UseVoxaVoiceSessionParams) {
         scenarioId: params.scenarioId,
         learningPath: params.learningPath,
         userLevel: params.userLevel,
+        sessionGoal: params.coachingGoal,
         authToken: params.authToken,
       });
       clientSecret = minted.clientSecret;
