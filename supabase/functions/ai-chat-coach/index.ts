@@ -36,6 +36,7 @@ const DEFAULT_AI_DAILY_MESSAGE_LIMIT = 20;
 const DEFAULT_AI_DAILY_SESSION_LIMIT = 5;
 const DEFAULT_AI_MAX_INPUT_CHARS = 1500;
 const DEFAULT_AI_MAX_OUTPUT_TOKENS = 1024;
+const MAX_SESSION_GOAL_CHARS = 400;
 
 type LearningPath = "business_english" | "spanish" | "mandarin";
 type UserLevel = "beginner" | "intermediate" | "advanced";
@@ -49,6 +50,7 @@ type CoachRequest = {
   learningPath: LearningPath;
   userLevel: UserLevel;
   mode: CoachMode;
+  sessionGoal?: string;
   messages: ChatMessage[];
 };
 
@@ -94,6 +96,7 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
   const learningPath = o.learningPath;
   const userLevel = o.userLevel;
   const mode = o.mode;
+  const sessionGoal = o.sessionGoal;
   const messages = o.messages;
 
   if (typeof scenarioId !== "string" || !scenarioId.trim()) {
@@ -111,6 +114,12 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
   }
   if (mode !== undefined && mode !== "practice" && mode !== "review") {
     throw new ValidationError("`mode` must be practice or review");
+  }
+  if (
+    sessionGoal !== undefined &&
+    (typeof sessionGoal !== "string" || sessionGoal.trim().length > MAX_SESSION_GOAL_CHARS)
+  ) {
+    throw new ValidationError(`sessionGoal must be a string up to ${MAX_SESSION_GOAL_CHARS} characters`);
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     throw new ValidationError("`messages` must be a non-empty array");
@@ -139,6 +148,9 @@ function parseBody(raw: string, maxInputChars: number): CoachRequest {
     learningPath: learningPath as LearningPath,
     userLevel: userLevel as UserLevel,
     mode: (mode === "review" ? "review" : "practice") as CoachMode,
+    ...(typeof sessionGoal === "string" && sessionGoal.trim()
+      ? { sessionGoal: sessionGoal.trim() }
+      : {}),
     messages: normalized,
   };
 }
@@ -364,6 +376,8 @@ Deno.serve(async (req) => {
     messageCountToday: messageCount,
     userMessagesInPayload: body.messages.filter((m) => m.role === "user").length,
     inputChars: lastUserMessage?.content.length ?? 0,
+    hasSessionGoal: Boolean(body.sessionGoal),
+    sessionGoalChars: body.sessionGoal?.length ?? 0,
   }));
 
   const systemPrompt = buildCoachSystemPrompt(
@@ -371,6 +385,7 @@ Deno.serve(async (req) => {
     body.learningPath,
     body.userLevel,
     body.mode,
+    body.sessionGoal,
   );
 
   try {

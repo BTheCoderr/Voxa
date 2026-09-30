@@ -4,13 +4,40 @@ import type { SessionCoachReview } from '@/lib/ai/providers/types';
 import type { ApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 
-import type { ConversationRow, Database, Json, MessageRole } from './database.types';
+import type { ConversationRow, CorrectionRow, Database, Json, MessageRole } from './database.types';
 import { ensureUserProfileRows } from './progress';
 
 export type ConversationHistoryItem = Pick<
   ConversationRow,
-  'id' | 'scenario_id' | 'scenario_title' | 'status' | 'summary' | 'started_at' | 'ended_at' | 'xp_awarded'
+  | 'id'
+  | 'scenario_id'
+  | 'scenario_title'
+  | 'learning_path'
+  | 'status'
+  | 'summary'
+  | 'coach_review'
+  | 'started_at'
+  | 'ended_at'
+  | 'xp_awarded'
 >;
+
+export type ConversationJournalEntry = Pick<
+  ConversationRow,
+  | 'id'
+  | 'scenario_id'
+  | 'scenario_title'
+  | 'learning_path'
+  | 'status'
+  | 'summary'
+  | 'coach_review'
+  | 'started_at'
+  | 'ended_at'
+  | 'xp_awarded'
+  | 'ai_provider_used'
+  | 'ai_used_fallback'
+> & {
+  corrections: CorrectionRow[];
+};
 
 export type ReviewedConversationItem = Pick<
   ConversationRow,
@@ -148,7 +175,7 @@ export async function getConversationHistory(
 
   const { data, error } = await client
     .from('conversations')
-    .select('id, scenario_id, scenario_title, status, summary, started_at, ended_at, xp_awarded')
+    .select('id, scenario_id, scenario_title, learning_path, status, summary, coach_review, started_at, ended_at, xp_awarded')
     .eq('user_id', userId)
     .order('started_at', { ascending: false })
     .limit(limit);
@@ -176,4 +203,37 @@ export async function getRecentReviewedConversations(
 
   if (error) throw error;
   return data ?? [];
+}
+
+
+export async function getConversationJournalEntry(
+  client: SupabaseClient<Database>,
+  userId: string,
+  conversationId: string,
+): Promise<ConversationJournalEntry> {
+  const [{ data: conversation, error: conversationError }, { data: corrections, error: correctionsError }] =
+    await Promise.all([
+      client
+        .from('conversations')
+        .select(
+          'id, scenario_id, scenario_title, learning_path, status, summary, coach_review, started_at, ended_at, xp_awarded, ai_provider_used, ai_used_fallback',
+        )
+        .eq('id', conversationId)
+        .eq('user_id', userId)
+        .single(),
+      client
+        .from('corrections')
+        .select('id, conversation_id, user_id, body, original, improved, explanation, created_at')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true }),
+    ]);
+
+  if (conversationError) throw conversationError;
+  if (correctionsError) throw correctionsError;
+
+  return {
+    ...conversation,
+    corrections: corrections ?? [],
+  };
 }

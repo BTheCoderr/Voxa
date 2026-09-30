@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TextCorrectionCards } from '@/components/conversation/TextCorrectionCards';
 import { TextMessageList, type TextChatMessage } from '@/components/conversation/TextMessageList';
 import { CoachRecap } from '@/components/practice/CoachRecap';
+import { PracticeFocusCard } from '@/components/practice/PracticeFocusCard';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
@@ -69,6 +70,8 @@ type TextSessionActiveProps = {
   accessToken: string;
   learningPath: ReturnType<typeof toApiLearningPath>;
   pathOverline: string;
+  coachingFocus?: string;
+  coachingMission?: string;
 };
 
 function TextSessionActive({
@@ -77,10 +80,13 @@ function TextSessionActive({
   accessToken,
   learningPath,
   pathOverline,
+  coachingFocus,
+  coachingMission,
 }: TextSessionActiveProps) {
   const insets = useSafeAreaInsets();
   const { addXpFromSession } = useProgress();
   const listRef = useRef<ScrollView>(null);
+  const sessionGoal = coachingMission?.trim() || coachingFocus?.trim() || undefined;
 
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<TextChatMessage[]>([]);
@@ -244,6 +250,7 @@ function TextSessionActive({
           scenarioId: scenario.id,
           learningPath,
           userLevel: USER_LEVEL,
+          sessionGoal,
           messages: [...coachMessages, { role: 'user', content: text }],
         },
         accessToken,
@@ -284,6 +291,7 @@ function TextSessionActive({
     scenario.id,
     learningPath,
     accessToken,
+    sessionGoal,
   ]);
 
   const playAssistantVoice = useCallback(async () => {
@@ -355,6 +363,7 @@ function TextSessionActive({
             scenarioId: scenario.id,
             learningPath,
             userLevel: USER_LEVEL,
+            sessionGoal,
             messages: messages.map((message) => ({
               role: message.role,
               content: message.text,
@@ -421,7 +430,7 @@ function TextSessionActive({
       coach_review: Boolean(review),
     });
     setReviewing(false);
-  }, [accessToken, addXpFromSession, learningPath, messages, scenario, startedAt, userId]);
+  }, [accessToken, addXpFromSession, learningPath, messages, scenario, sessionGoal, startedAt, userId]);
 
   const showRecap = sessionSummary !== null && sessionReview !== null;
 
@@ -469,6 +478,8 @@ function TextSessionActive({
             <BetaDisclaimer compact />
           </View>
 
+          <PracticeFocusCard focus={coachingFocus} mission={coachingMission} />
+
           {showRecap && sessionReview && sessionStats ? (
             <CoachRecap
               review={sessionReview}
@@ -479,7 +490,12 @@ function TextSessionActive({
                 const next = getScenario(sessionReview.suggestedScenarioId as ScenarioId) ?? scenario;
                 router.replace({
                   pathname: '/(app)/text-practice/[scenarioId]',
-                  params: { scenarioId: next.id, path: learningPath },
+                  params: {
+                    scenarioId: next.id,
+                    path: learningPath,
+                    focus: sessionReview.focus,
+                    mission: sessionReview.nextMission,
+                  },
                 });
               }}
               onHistory={() => router.push('/(app)/history')}
@@ -577,7 +593,12 @@ function TextSessionActive({
 }
 
 export default function TextPracticeScreen() {
-  const params = useLocalSearchParams<{ scenarioId: string; path?: string }>();
+  const params = useLocalSearchParams<{
+    scenarioId: string;
+    path?: string;
+    focus?: string;
+    mission?: string;
+  }>();
   const scenario = useMemo(() => getScenario(params.scenarioId as ScenarioId), [params.scenarioId]);
   const { session, user } = useAuth();
   const [learningPath, setLearningPath] = useState<ReturnType<typeof toApiLearningPath> | null>(null);
@@ -638,6 +659,8 @@ export default function TextPracticeScreen() {
       accessToken={session.access_token}
       learningPath={learningPath}
       pathOverline={pathOverline}
+      coachingFocus={typeof params.focus === 'string' ? params.focus : undefined}
+      coachingMission={typeof params.mission === 'string' ? params.mission : undefined}
     />
   );
 }

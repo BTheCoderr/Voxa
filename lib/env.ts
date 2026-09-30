@@ -1,6 +1,8 @@
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
-const REALTIME_SESSION_URL = process.env.EXPO_PUBLIC_REALTIME_SESSION_URL ?? '';
+const REALTIME_SESSION_URL =
+  process.env.EXPO_PUBLIC_REALTIME_SESSION_URL ??
+  (SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/realtime-session` : '');
 const AI_CHAT_COACH_URL = process.env.EXPO_PUBLIC_AI_CHAT_COACH_URL ?? '';
 const ELEVENLABS_TTS_URL = process.env.EXPO_PUBLIC_ELEVENLABS_TTS_URL ?? '';
 const AI_MODE_RAW = process.env.EXPO_PUBLIC_AI_MODE ?? 'text';

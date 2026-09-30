@@ -10,6 +10,7 @@ export type CreateRealtimeSessionInput = {
   scenarioId: string;
   learningPath: ApiLearningPath;
   userLevel: UserLevel;
+  sessionGoal?: string;
   /** Supabase user access_token; required when Edge Function uses `verify_jwt`. */
   authToken: string;
 };
@@ -54,6 +55,7 @@ export async function fetchRealtimeClientSecret(
       scenarioId: input.scenarioId,
       learningPath: input.learningPath,
       userLevel: input.userLevel,
+      ...(input.sessionGoal?.trim() ? { sessionGoal: input.sessionGoal.trim() } : {}),
     }),
   });
 
