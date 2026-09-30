@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SessionCoachReview } from '@/lib/ai/providers/types';
 
 const KEY = '@voxa/coach-plan/v1';
+const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type PersonalizedMission = {
   scenarioId: string;
@@ -37,12 +38,19 @@ export async function loadPersonalizedMission(): Promise<PersonalizedMission | n
     ) {
       return null;
     }
+    const createdAt = typeof parsed.createdAt === 'string' ? parsed.createdAt : new Date(0).toISOString();
+    const createdAtMs = Date.parse(createdAt);
+    if (!Number.isFinite(createdAtMs) || Date.now() - createdAtMs > MAX_AGE_MS) {
+      await AsyncStorage.removeItem(KEY);
+      return null;
+    }
+
     return {
       scenarioId: parsed.scenarioId,
       title: typeof parsed.title === 'string' && parsed.title.trim() ? parsed.title : 'Your next mission',
       instruction: parsed.instruction,
       focus: parsed.focus,
-      createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : new Date(0).toISOString(),
+      createdAt,
     };
   } catch {
     return null;
