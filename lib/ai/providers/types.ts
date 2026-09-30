@@ -28,6 +28,7 @@ export type ChatCoachRequest = {
   learningPath: ApiLearningPath;
   userLevel: UserLevel;
   mode?: 'practice' | 'review';
+  sessionGoal?: string;
   messages: ChatCoachMessage[];
 };
 
