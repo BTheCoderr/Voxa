@@ -33,18 +33,28 @@ function normalizeCustomSchemeRedirect(url: string, scheme: string): string {
  * If `voxa://auth/callback` is missing from Redirect URLs, or the **email template** does not use
  * `{{ .ConfirmationURL }}`, users may still land on **Site URL** (`https://voxxa.netlify.app/...`).
  */
-export function getAuthMagicLinkRedirectUrl(): string {
+function buildAuthRedirect(path: 'auth/callback' | 'auth/recovery'): string {
   if (Platform.OS === 'web') {
     const configured = process.env.EXPO_PUBLIC_AUTH_WEB_REDIRECT_URL?.trim();
-    if (configured) return configured;
-    if (typeof window !== 'undefined' && window.location?.origin) {
-      return `${window.location.origin}/auth/callback`;
+    if (configured) {
+      try {
+        const url = new URL(configured);
+        url.pathname = `/${path}`;
+        url.search = '';
+        url.hash = '';
+        return url.toString();
+      } catch {
+        // Fall through to the runtime origin / custom scheme.
+      }
     }
-    return `${resolveAppScheme()}://auth/callback`;
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}/${path}`;
+    }
+    return `${resolveAppScheme()}://${path}`;
   }
 
   const envOverride = process.env.EXPO_PUBLIC_AUTH_REDIRECT_NATIVE?.trim();
-  if (envOverride) {
+  if (envOverride && path === 'auth/callback') {
     if (__DEV__) {
       // eslint-disable-next-line no-console
       console.log('[auth] emailRedirectTo (EXPO_PUBLIC_AUTH_REDIRECT_NATIVE)', envOverride);
@@ -53,17 +63,25 @@ export function getAuthMagicLinkRedirectUrl(): string {
   }
 
   const scheme = resolveAppScheme();
-  const fromExpo = Linking.createURL('auth/callback', { scheme });
+  const fromExpo = Linking.createURL(path, { scheme });
   const redirectTo = ['http', 'https', 'exp'].some((p) => fromExpo.startsWith(`${p}://`))
     ? fromExpo
     : normalizeCustomSchemeRedirect(fromExpo, scheme);
 
   if (__DEV__) {
     // eslint-disable-next-line no-console
-    console.log('[auth] emailRedirectTo Linking.createURL (raw) →', fromExpo);
+    console.log('[auth] redirect Linking.createURL (raw) →', fromExpo);
     // eslint-disable-next-line no-console
-    console.log('[auth] emailRedirectTo (sent to Supabase signInWithOtp) →', redirectTo);
+    console.log('[auth] redirect →', redirectTo);
   }
 
   return redirectTo;
+}
+
+export function getAuthMagicLinkRedirectUrl(): string {
+  return buildAuthRedirect('auth/callback');
+}
+
+export function getPasswordRecoveryRedirectUrl(): string {
+  return buildAuthRedirect('auth/recovery');
 }
