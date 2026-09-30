@@ -29,6 +29,16 @@ export default function AppLayout() {
         }}
       />
       <Stack.Screen
+        name="history/[conversationId]"
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerTitle: '',
+          headerTintColor: '#F4F7FF',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
         name="debug-health"
         options={{
           presentation: 'modal',
