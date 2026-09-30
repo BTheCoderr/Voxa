@@ -34,7 +34,7 @@ Use this list before uploading a build to App Store Connect TestFlight.
 
 ## Legal & copy
 
-- In-app **Privacy** and **Terms** under `/legal/*` are **placeholders** until you publish real policies and URLs.
+- In-app **Privacy** and **Terms** now provide product-aligned overviews; review them against the public legal policies before release.
 - Beta copy in-app states: TestFlight beta, imperfect AI, practice tool (not a certified test).
 
 ## Known limitations (share with testers)
@@ -56,4 +56,4 @@ Use this list before uploading a build to App Store Connect TestFlight.
 
 - Collect crashes from Xcode / TestFlight.
 - Fix every release-blocking item from the physical-device checklist.
-- Replace/review placeholder legal content and confirm public Privacy Policy + Support URLs before the next public App Store update.
+- Review the in-app legal overviews and confirm public Privacy Policy + Support URLs before the next public App Store update.
