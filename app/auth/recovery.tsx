@@ -1,6 +1,5 @@
 import { router } from 'expo-router';
-import * as Linking from 'expo-linking';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,103 +16,44 @@ import { VoxaButton } from '@/components/ui/VoxaButton';
 import { VoxaText } from '@/components/ui/VoxaText';
 import { palette, spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
-import { completeSessionFromUrl } from '@/lib/auth/completeSessionFromUrl';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase/client';
 
-type Phase = 'working' | 'ready' | 'saving' | 'error';
-
-const TIMEOUT_MS = 12_000;
+type Phase = 'checking' | 'ready' | 'saving' | 'error';
 
 export default function PasswordRecoveryScreen() {
   const insets = useSafeAreaInsets();
-  const [phase, setPhase] = useState<Phase>('working');
+  const [phase, setPhase] = useState<Phase>('checking');
   const [message, setMessage] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const handledRef = useRef(false);
-  const processingRef = useRef(false);
 
   useEffect(() => {
-    let alive = true;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    const clearTimer = () => {
-      if (timeoutId !== undefined) {
-        clearTimeout(timeoutId);
-        timeoutId = undefined;
-      }
-    };
-
-    const fail = (msg: string) => {
-      if (!alive || handledRef.current) return;
-      handledRef.current = true;
-      clearTimer();
-      setMessage(msg);
-      setPhase('error');
-      trackEvent('password_recovery_link_completed', { ok: false });
-    };
-
-    const consumeUrl = async (url: string | null) => {
-      if (!alive || handledRef.current || processingRef.current || !url) return;
-
-      clearTimer();
-      processingRef.current = true;
-      try {
-        const result = await completeSessionFromUrl(url);
-        if (!alive || handledRef.current) return;
-        if (!result.ok) {
-          fail(result.message);
-          return;
-        }
-
-        handledRef.current = true;
-        setPhase('ready');
-        setMessage(null);
-        trackEvent('password_recovery_link_completed', { ok: true });
-      } finally {
-        processingRef.current = false;
-      }
-    };
-
-    if (!env.supabaseConfigured) {
-      fail('Password recovery is not configured in this build.');
-      return () => {
-        alive = false;
-        clearTimer();
-      };
-    }
+    let active = true;
 
     void (async () => {
-      let initial = await Linking.getInitialURL();
-      if (!initial) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        if (!alive) return;
-        initial = await Linking.getInitialURL();
-      }
-      if (!alive) return;
-
-      if (!initial) {
-        fail('No password recovery link was opened. Request a new reset email.');
+      if (!env.supabaseConfigured) {
+        if (active) {
+          setMessage('Password recovery is not configured in this build.');
+          setPhase('error');
+        }
         return;
       }
 
-      await consumeUrl(initial);
+      const { data, error } = await supabase.auth.getSession();
+      if (!active) return;
+
+      if (error || !data.session) {
+        setMessage('This reset session is missing or expired. Request a new password reset email.');
+        setPhase('error');
+        return;
+      }
+
+      setPhase('ready');
     })();
 
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      void consumeUrl(url);
-    });
-
-    timeoutId = setTimeout(() => {
-      if (!alive || handledRef.current) return;
-      fail('Password recovery is taking too long. Check your connection and request a new link.');
-    }, TIMEOUT_MS);
-
     return () => {
-      alive = false;
-      clearTimer();
-      sub.remove();
+      active = false;
     };
   }, []);
 
@@ -142,7 +82,7 @@ export default function PasswordRecoveryScreen() {
     router.replace('/');
   };
 
-  if (phase === 'working') {
+  if (phase === 'checking') {
     return (
       <GradientBackground>
         <View
@@ -151,9 +91,9 @@ export default function PasswordRecoveryScreen() {
             { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl },
           ]}>
           <ActivityIndicator size="large" color={palette.cyan} />
-          <VoxaText variant="title">Opening your reset link…</VoxaText>
+          <VoxaText variant="title">Preparing password reset…</VoxaText>
           <VoxaText variant="muted" style={styles.centerText}>
-            Securely connecting your account.
+            Checking your secure recovery session.
           </VoxaText>
         </View>
       </GradientBackground>
@@ -168,7 +108,7 @@ export default function PasswordRecoveryScreen() {
             styles.center,
             { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl },
           ]}>
-          <VoxaText variant="title">Couldn’t open the reset link</VoxaText>
+          <VoxaText variant="title">Couldn’t reset the password</VoxaText>
           <VoxaText variant="body" style={styles.centerText}>
             {message ?? 'Request a new password reset email.'}
           </VoxaText>
