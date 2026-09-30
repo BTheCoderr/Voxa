@@ -1,5 +1,14 @@
 # Voxa
 
+[![Mobile CI](https://github.com/BTheCoderr/Voxa/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/BTheCoderr/Voxa/actions/workflows/mobile-ci.yml)
+![App Store](https://img.shields.io/badge/App%20Store-Live-000000?logo=apple)
+![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo)
+![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)
+
+**App Store:** https://apps.apple.com/app/voxa-ai-speaking-practice/id6771445659
+
+
 <!-- repo-intro:start -->
 **Project snapshot:** Voxa is a mobile-first AI speaking-practice app for iOS and Android. It combines realistic conversation scenarios, realtime voice, lower-cost text/dictation practice, structured corrections, daily missions, progress tracking, and synced practice history.
 
@@ -151,6 +160,25 @@ The repository tracks the non-code work needed to ship a mobile AI product, incl
 - [Beta QA checklist](./docs/BETA_QA_CHECKLIST.md)
 - [App Store metadata](./docs/APP_STORE_METADATA.md)
 - [Screenshot plan](./docs/SCREENSHOTS.md)
+
+## Repository guide
+
+- [CHANGELOG.md](./CHANGELOG.md) — release history
+- [ROADMAP.md](./ROADMAP.md) — product direction
+- [docs/README.md](./docs/README.md) — current vs. historical documentation
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — development expectations
+- [SECURITY.md](./SECURITY.md) — vulnerability reporting
+- [.github/workflows/mobile-ci.yml](./.github/workflows/mobile-ci.yml) — automated quality gates
+
+## Repository quality gates
+
+Pull requests run mobile TypeScript, Deno checks for server-side Edge Functions, and a production build of the Next.js marketing site.
+
+**GitHub merge, EAS/App Store release, and Netlify publication are separate actions.**
+
+## License
+
+Copyright © 2026 Baheem Ferrell. All rights reserved. This public repository is viewable for portfolio, review, and collaboration purposes and is not released under an open-source license. See [LICENSE](./LICENSE).
 
 ## Product principle
 
