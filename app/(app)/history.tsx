@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   View,
@@ -165,16 +166,38 @@ export default function HistoryScreen() {
             ) : null
           }
           renderItem={({ item }) => (
-            <GlassPanel style={styles.card}>
-              <VoxaText variant="caption" style={styles.cardMeta}>
-                {formatSessionWhen(item.started_at)} · {item.status}
-                {item.xp_awarded > 0 ? ` · +${item.xp_awarded} XP` : ''}
-              </VoxaText>
-              <VoxaText variant="lead" style={styles.cardTitle}>
-                {item.scenario_title}
-              </VoxaText>
-              {item.summary ? <VoxaText variant="muted">{item.summary}</VoxaText> : null}
-            </GlassPanel>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open coaching journal entry for ${item.scenario_title}`}
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/history/[conversationId]',
+                  params: { conversationId: item.id },
+                })
+              }
+              style={({ pressed }) => pressed && styles.cardPressed}>
+              <GlassPanel style={styles.card}>
+                <View style={styles.cardTop}>
+                  <VoxaText variant="caption" style={styles.cardMeta}>
+                    {formatSessionWhen(item.started_at)} · {item.status}
+                    {item.xp_awarded > 0 ? ` · +${item.xp_awarded} XP` : ''}
+                  </VoxaText>
+                  <VoxaText variant="caption" style={styles.openLabel}>
+                    Open
+                  </VoxaText>
+                </View>
+                <VoxaText variant="lead" style={styles.cardTitle}>
+                  {item.scenario_title}
+                </VoxaText>
+                {item.summary ? <VoxaText variant="muted">{item.summary}</VoxaText> : null}
+                <View style={styles.cardFoot}>
+                  <VoxaText variant="caption" style={styles.recapBadge}>
+                    {item.coach_review ? 'Coach recap saved' : 'Session summary'}
+                  </VoxaText>
+                  <VoxaText variant="caption">Review & practice again →</VoxaText>
+                </View>
+              </GlassPanel>
+            </Pressable>
           )}
         />
 
@@ -214,6 +237,15 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: spacing.sm,
   },
+  cardPressed: {
+    opacity: 0.82,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   cardMeta: {
     marginBottom: spacing.xs,
     opacity: 0.85,
@@ -222,6 +254,23 @@ const styles = StyleSheet.create({
     color: palette.textPrimary,
     fontWeight: '700',
     marginBottom: spacing.xs,
+  },
+  openLabel: {
+    color: palette.cyan,
+    fontWeight: '700',
+  },
+  cardFoot: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.frostStrong,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  recapBadge: {
+    color: palette.cyan,
+    fontWeight: '700',
   },
   loader: {
     paddingVertical: spacing.lg,
