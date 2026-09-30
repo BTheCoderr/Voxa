@@ -16,6 +16,8 @@ const SCENARIO_SUMMARY: Record<string, string> = {
 };
 
 const ALLOWED_SCENARIOS = Object.keys(SCENARIO_SUMMARY).join(", ");
+const ALLOWED_SKILL_TAGS =
+  "clarity | grammar | vocabulary | fluency | natural_phrasing | professional_tone | response_building | conversation_flow | conciseness | politeness";
 
 function languageBrief(path: LearningPath): string {
   switch (path) {
@@ -103,6 +105,9 @@ function buildReviewPrompt(
     "Do not invent mistakes, pronunciation problems, emotions, or facts that are not present in the transcript.",
     "Do not score the learner. Do not use school-style grades.",
     "Choose one concrete strength and one highest-leverage focus for the next practice.",
+    "Assign one standardized strengthTag and one focusTag so Voxa can detect patterns across sessions.",
+    `Both skill tags must be exactly one of: ${ALLOWED_SKILL_TAGS}.`,
+    "Do not use pronunciation as a skill tag because this review is based on transcript evidence, not acoustic scoring.",
     "Return at most 2 corrections, only when the transcript supports them.",
     "The next mission should be short, actionable, and doable in one Voxa session.",
     `suggestedScenarioId must be one of: ${ALLOWED_SCENARIOS}.`,
@@ -113,7 +118,7 @@ function buildReviewPrompt(
     `Completed scenario: ${scenarioLine}`,
     "",
     "Respond with valid JSON only matching this schema:",
-    '{"reply":"one-sentence overall recap","corrections":[{"original":"string","improved":"string","explanation":"string"}],"encouragement":"one short supportive sentence","review":{"headline":"short recap title","strength":"specific thing the learner did well","focus":"single highest-leverage thing to improve","nextMission":"one concrete instruction for the next practice","suggestedScenarioId":"allowed scenario id"}}',
+    '{"reply":"one-sentence overall recap","corrections":[{"original":"string","improved":"string","explanation":"string"}],"encouragement":"one short supportive sentence","review":{"headline":"short recap title","strength":"specific thing the learner did well","strengthTag":"allowed skill tag","focus":"single highest-leverage thing to improve","focusTag":"allowed skill tag","nextMission":"one concrete instruction for the next practice","suggestedScenarioId":"allowed scenario id"}}',
     "- review is required.",
     "- Keep each review field concise and concrete.",
   ].join("\n");
