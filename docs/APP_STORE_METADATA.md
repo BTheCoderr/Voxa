@@ -34,8 +34,9 @@ speaking,english,conversation,practice,AI,language,pronunciation,voice,streak,bu
 
 • **Voice-first:** talk out loud; short sessions fit a busy day.  
 • **Supportive feedback:** gentle corrections when it helps — no judgment.  
-• **Progress you can feel:** XP and **speaking-day streaks** that reward consistency.  
-• **History (signed in):** revisit session summaries and notes when cloud sync is enabled.
+• **Adaptive coaching:** difficulty, weekly plans, and next missions respond to your saved practice history.  
+• **Progress you can inspect:** XP, streaks, Coaching Journal, Correction Mastery, and factual recent-vs-earlier trends.  
+• **History (signed in):** revisit session recaps, corrections, and targeted replay when cloud sync is enabled.
 
 **Important:** Voxa is a **practice tool**, not a certified language exam or professional tutoring replacement. **AI responses may be imperfect.** TestFlight builds may change frequently — thank you for early feedback.
 
@@ -60,12 +61,14 @@ Use the same privacy URL in-app when you replace `/legal/privacy` placeholders.
 
 ## Tester notes (TestFlight “What to test”)
 
-1. Complete onboarding (language, goals, microphone explainer).  
-2. **Practice tab:** start a scenario — allow microphone when prompted.  
-3. Have a short **voice session**; end cleanly; check **session recap** (duration, XP, notes count).  
-4. **Progress tab:** confirm streak/XP update after a session with transcript.  
-5. **History** (signed in + Supabase): confirm sessions list after sync.  
-6. **Profile:** sign in/out, open Privacy/Terms placeholders, **Diagnostics** for env status.  
+1. Complete onboarding: language → goal → **practice difficulty** → microphone explainer.  
+2. Create/sign into an account and test **Forgot password** from the real email link.  
+3. Run one **text practice** session and test optional “Hear this response” playback.  
+4. Run one **voice session**; end cleanly and check the Coach Recap.  
+5. **History / Coaching Journal:** reopen the completed session and replay its focus.  
+6. **Progress:** inspect Weekly Coach Plan, Adaptive Difficulty, Correction Mastery, and Progress Trends states.  
+7. **Come-back nudges:** test “Not today” plus the Profile opt-out toggle.  
+8. **Diagnostics:** verify environment, microphone state, app/build identity, TTS health, and realtime configuration.  
 
 **Known:** Voice requires a **dev/production build** (not Expo Go). Web voice loop may be limited.
 
