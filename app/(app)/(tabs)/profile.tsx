@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +19,10 @@ import {
   getPreferredLevel,
   setPreferredLevel,
 } from '@/lib/preferences/storage';
+import {
+  getComebackNudgesEnabled,
+  setComebackNudgesEnabled,
+} from '@/lib/practice/comeback';
 import { practiceLevelLabel } from '@/lib/progress/adaptiveDifficulty';
 import type { UserLevel } from '@/lib/realtime/types';
 
@@ -27,16 +31,21 @@ export default function ProfileScreen() {
   const { user, signOut, initialized } = useAuth();
   const [practiceLanguage, setPracticeLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
   const [practiceLevel, setPracticeLevelState] = useState<UserLevel>('intermediate');
+  const [coachNudgesEnabled, setCoachNudgesEnabledState] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void (async () => {
         const language = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
-        const level = await getPreferredLevel(language);
+        const [level, nudgesEnabled] = await Promise.all([
+          getPreferredLevel(language),
+          getComebackNudgesEnabled(),
+        ]);
         if (!active) return;
         setPracticeLanguage(language);
         setPracticeLevelState(level);
+        setCoachNudgesEnabledState(nudgesEnabled);
       })();
       return () => {
         active = false;
@@ -116,6 +125,29 @@ export default function ProfileScreen() {
             }}
             showDescriptions
           />
+        </GlassPanel>
+
+        <VoxaText variant="lead" style={styles.section}>
+          Coach nudges
+        </VoxaText>
+        <GlassPanel style={styles.nudgeCard}>
+          <View style={styles.nudgeRow}>
+            <View style={styles.nudgeCopy}>
+              <VoxaText variant="body" style={styles.link}>
+                Come-back nudges
+              </VoxaText>
+              <VoxaText variant="caption">
+                One in-app reminder at a time for weekly-plan progress, streak risk, or returning after a few quiet days.
+              </VoxaText>
+            </View>
+            <Switch
+              value={coachNudgesEnabled}
+              onValueChange={(enabled) => {
+                setCoachNudgesEnabledState(enabled);
+                void setComebackNudgesEnabled(enabled);
+              }}
+            />
+          </View>
         </GlassPanel>
 
         <VoxaText variant="lead" style={styles.section}>
@@ -210,6 +242,19 @@ const styles = StyleSheet.create({
   },
   practiceCard: {
     gap: spacing.md,
+  },
+  nudgeCard: {
+    gap: spacing.md,
+  },
+  nudgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  nudgeCopy: {
+    flex: 1,
+    gap: 3,
   },
   practiceHeader: {
     flexDirection: 'row',
