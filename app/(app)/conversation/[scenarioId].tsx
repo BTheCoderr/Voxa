@@ -275,6 +275,7 @@ function ConversationSessionActive({
             status: 'completed',
             aiProviderUsed: reviewProviderUsed,
             aiUsedFallback: reviewUsedFallback,
+            coachReview: review,
           });
         } catch (e) {
           console.warn('completeConversation', e);
