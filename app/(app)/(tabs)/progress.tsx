@@ -60,12 +60,12 @@ export default function ProgressScreen() {
 
           <View
             style={styles.track}
-            accessibilityRole="progressbar"
-            accessibilityValue={{
-              min: 0,
-              max: 100,
-              now: Math.round(level.progress * 100),
-            }}>
+            accessible
+            accessibilityLabel={
+              level.next
+                ? `${Math.round(level.progress * 100)} percent of the way to ${level.next.name}`
+                : 'Top Voxa level reached'
+            }>
             <View style={[styles.fill, { width: progressWidth }]} />
           </View>
 
