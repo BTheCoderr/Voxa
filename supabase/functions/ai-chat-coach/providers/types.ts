@@ -38,6 +38,7 @@ export type CoachProviderParams = {
   learningPath: string;
   userLevel: string;
   mode: "practice" | "review";
+  sessionGoal?: string;
   messages: { role: "user" | "assistant"; content: string }[];
   systemPrompt: string;
   maxOutputTokens: number;
