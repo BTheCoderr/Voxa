@@ -14,7 +14,7 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
 import { VoxaText } from '@/components/ui/VoxaText';
-import { SCENARIOS, type LaunchLanguage } from '@/constants/scenarios';
+import { getScenario, SCENARIOS, type LaunchLanguage, type ScenarioId } from '@/constants/scenarios';
 import { palette, spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
 import { openScenarioPractice } from '@/lib/ai/openPractice';
@@ -22,6 +22,10 @@ import { isTextPracticeMode, isVoicePracticeMode } from '@/lib/ai/mode';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import { isScreenshotMode } from '@/lib/presentation/screenshotMode';
 import { getPreferredLanguage, setPreferredLanguage } from '@/lib/preferences/storage';
+import {
+  loadPersonalizedMission,
+  type PersonalizedMission,
+} from '@/lib/practice/coachPlan';
 import { getDailyMission, wasActiveToday } from '@/lib/practice/dailyMission';
 import { getCoachLevel } from '@/lib/progress/levels';
 import { useProgress } from '@/lib/progress/useProgress';
@@ -30,13 +34,18 @@ import { useFocusEffect } from '@react-navigation/native';
 export default function PracticeHomeScreen() {
   const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<LaunchLanguage | null | undefined>(undefined);
+  const [personalizedMission, setPersonalizedMission] = useState<PersonalizedMission | null>(null);
   const { progress, progressHydrated, refresh } = useProgress();
 
   useFocusEffect(
     useCallback(() => {
       void (async () => {
-        const stored = await getPreferredLanguage();
+        const [stored, plan] = await Promise.all([
+          getPreferredLanguage(),
+          loadPersonalizedMission(),
+        ]);
         setLanguage(stored ?? DEFAULT_LAUNCH_LANGUAGE);
+        setPersonalizedMission(plan);
         await refresh();
       })();
     }, [refresh]),
@@ -55,11 +64,19 @@ export default function PracticeHomeScreen() {
   }, [effectiveLanguage]);
 
   const dailyMission = useMemo(() => getDailyMission(filtered), [filtered]);
+  const personalizedScenario = useMemo(() => {
+    if (!personalizedMission) return null;
+    return getScenario(personalizedMission.scenarioId as ScenarioId) ?? null;
+  }, [personalizedMission]);
+  const coachMission = personalizedScenario ?? dailyMission;
   const level = getCoachLevel(progress?.xp ?? 0);
   const completedToday = wasActiveToday(progress?.lastDay);
 
   const startScenario = useCallback(
-    (scenarioId: (typeof SCENARIOS)[number]['id'], source: 'daily_mission' | 'scenario_library') => {
+    (
+      scenarioId: (typeof SCENARIOS)[number]['id'],
+      source: 'daily_mission' | 'scenario_library' | 'coach_recommendation',
+    ) => {
       trackEvent('scenario_selected', {
         scenario_id: scenarioId,
         mode: isVoicePracticeMode() ? 'voice' : 'text',
@@ -134,13 +151,19 @@ export default function PracticeHomeScreen() {
           </GlassPanel>
         </Pressable>
 
-        {dailyMission ? (
+        {coachMission ? (
           <DailyCoachCard
-            scenario={dailyMission}
+            scenario={coachMission}
             languageLabel={launchLanguageLabel(effectiveLanguage)}
             streak={progress?.streak ?? 0}
             completedToday={completedToday}
-            onStart={() => startScenario(dailyMission.id, 'daily_mission')}
+            personalizedMission={personalizedScenario ? personalizedMission : null}
+            onStart={() =>
+              startScenario(
+                coachMission.id,
+                personalizedScenario ? 'coach_recommendation' : 'daily_mission',
+              )
+            }
           />
         ) : null}
 
