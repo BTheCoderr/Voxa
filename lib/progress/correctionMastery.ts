@@ -66,7 +66,7 @@ function normalizePhrase(value: string): string {
   return value
     .normalize('NFKC')
     .toLocaleLowerCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/[^\w\s\u00C0-\u024F\u3400-\u9FFF]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -121,18 +121,24 @@ function areSimilarTargets(a: string, b: string): boolean {
   if (!a || !b) return false;
   if (a === b) return true;
 
+  const characterSimilarity = diceSimilarity(bigrams(a), bigrams(b));
+  if (a.length >= 6 && b.length >= 6 && characterSimilarity >= 0.9) {
+    return true;
+  }
+
   const aTokens = tokenSet(a);
   const bTokens = tokenSet(b);
 
   if (aTokens.size >= 3 && bTokens.size >= 3) {
     const overlap = overlapRatio(aTokens, bTokens);
-    if (overlap.jaccard >= 0.75) return true;
-    if (overlap.intersection >= 3 && overlap.containment >= 0.88) return true;
-  }
-
-  const hasWhitespace = a.includes(' ') || b.includes(' ');
-  if (!hasWhitespace && a.length >= 6 && b.length >= 6) {
-    return diceSimilarity(bigrams(a), bigrams(b)) >= 0.9;
+    const oneContainsTheOther = a.includes(b) || b.includes(a);
+    if (
+      oneContainsTheOther &&
+      overlap.intersection >= 3 &&
+      overlap.containment >= 0.88
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -266,6 +272,8 @@ export function buildCorrectionMastery(
       const dates = group.items
         .map((item) => Date.parse(item.correction.created_at))
         .filter(Number.isFinite);
+
+      if (dates.length === 0) return null;
 
       const firstSeenAt = new Date(Math.min(...dates)).toISOString();
       const lastSeenAt = new Date(Math.max(...dates)).toISOString();
