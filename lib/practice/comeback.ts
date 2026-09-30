@@ -10,6 +10,7 @@ export type ComebackNudgeKind =
   | 'one_rep_left'
   | 'week_at_risk'
   | 'streak_at_risk'
+  | 'streak_recovery'
   | 'quiet_comeback'
   | 'start_week';
 
@@ -135,6 +136,21 @@ export function buildComebackNudge({
       title: `Your ${streak}-day rhythm needs one rep today.`,
       body: 'A short planned session is enough. You do not need a marathon practice day to keep momentum moving.',
       actionLabel: 'Protect my streak',
+    });
+  }
+
+  if (
+    weeklyPlan &&
+    remaining.length > 0 &&
+    streak === 0 &&
+    inactiveDays !== null &&
+    inactiveDays >= 2
+  ) {
+    return nudgeFromItem('streak_recovery', weeklyPlan, remaining[0]!, {
+      eyebrow: 'Restart the rhythm',
+      title: 'The old streak is gone. The next one can start with one rep.',
+      body: 'No make-up work and no penalty. Complete one planned conversation today and rebuild from there.',
+      actionLabel: 'Start a new streak',
     });
   }
 
