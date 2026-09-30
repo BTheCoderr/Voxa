@@ -20,7 +20,7 @@ export default function LanguageScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <VoxaText variant="caption" style={styles.overline}>
-            Step 1 of 3
+            Step 1 of 4
           </VoxaText>
           <VoxaText variant="title">Choose your focus language</VoxaText>
           <VoxaText variant="body">We will tune scenarios, prompts, and feedback for this track.</VoxaText>

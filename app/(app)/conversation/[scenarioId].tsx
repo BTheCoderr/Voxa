@@ -30,10 +30,11 @@ import {
 } from '@/lib/db/conversations';
 import { env } from '@/lib/env';
 import { DEFAULT_LAUNCH_LANGUAGE, parseApiLearningPath } from '@/lib/learningPath/display';
-import { getPreferredLanguage } from '@/lib/preferences/storage';
+import { getPreferredLanguage, getPreferredLevel } from '@/lib/preferences/storage';
 import { savePersonalizedMission } from '@/lib/practice/coachPlan';
+import { practiceLevelLabel } from '@/lib/progress/adaptiveDifficulty';
 import { useProgress } from '@/lib/progress/useProgress';
-import { toApiLearningPath, type ApiLearningPath } from '@/lib/realtime/learningPath';
+import { fromApiLearningPath, toApiLearningPath, type ApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UseVoxaVoiceSessionParams } from '@/lib/realtime/useVoxaVoiceSession';
 import { useVoxaVoiceSession } from '@/lib/realtime/useVoxaVoiceSession';
 import type { TranscriptPersistPayload, VoiceSessionPhase } from '@/lib/realtime/voiceSessionTypes';
@@ -79,6 +80,7 @@ type ConversationSessionActiveProps = {
   userId: string;
   accessToken: string;
   learningPath: ApiLearningPath;
+  userLevel: import('@/lib/realtime/types').UserLevel;
   coachingFocus?: string;
   coachingMission?: string;
 };
@@ -88,6 +90,7 @@ function ConversationSessionActive({
   userId,
   accessToken,
   learningPath,
+  userLevel,
   coachingFocus,
   coachingMission,
 }: ConversationSessionActiveProps) {
@@ -178,13 +181,13 @@ function ConversationSessionActive({
       scenarioId: scenario.id,
       scenarioTitle: scenario.title,
       learningPath,
-      userLevel: 'intermediate',
+      userLevel,
       authToken: accessToken,
       coachingGoal: sessionGoal,
       onTranscriptPersist,
       onCorrectionPersist,
     };
-  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist, sessionGoal]);
+  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist, sessionGoal, userLevel]);
 
   const { phase, errorMessage, messages, corrections, muted, startSession, endSession, toggleMute } =
     useVoxaVoiceSession(voiceParams);
@@ -203,7 +206,7 @@ function ConversationSessionActive({
           scenarioId: scenario.id,
           scenarioTitle: scenario.title,
           learningPath,
-          userLevel: 'intermediate',
+          userLevel,
         });
         conversationIdRef.current = row.id;
       } catch (e) {
@@ -213,7 +216,7 @@ function ConversationSessionActive({
       }
     }
     await startSession();
-  }, [learningPath, scenario, startSession, userId]);
+  }, [learningPath, scenario, startSession, userId, userLevel]);
 
   const onEnd = useCallback(async () => {
     setClosing(true);
@@ -238,7 +241,7 @@ function ConversationSessionActive({
             {
               scenarioId: scenario.id,
               learningPath,
-              userLevel: 'intermediate',
+              userLevel,
               sessionGoal,
               messages: messages
                 .filter((message) => message.text.trim())
@@ -304,7 +307,7 @@ function ConversationSessionActive({
     } finally {
       setClosing(false);
     }
-  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, sessionGoal, userId]);
+  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, sessionGoal, userId, userLevel]);
 
   const showPostSummary = phase === 'ended' && sessionReview && sessionStats;
   const busyStarting =
@@ -339,6 +342,9 @@ function ConversationSessionActive({
           </VoxaText>
           <VoxaText variant="title">{scenario.title}</VoxaText>
           <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
+          <VoxaText variant="caption" style={styles.levelHint}>
+            {practiceLevelLabel(userLevel)} · adaptive coaching
+          </VoxaText>
           <BetaDisclaimer compact />
         </View>
 
@@ -431,16 +437,15 @@ export default function ConversationScreen() {
   const scenario = useMemo(() => getScenario(params.scenarioId as ScenarioId), [params.scenarioId]);
   const { session, user } = useAuth();
   const [learningPath, setLearningPath] = useState<ApiLearningPath | null>(null);
+  const [userLevel, setUserLevel] = useState<import('@/lib/realtime/types').UserLevel | null>(null);
 
   useEffect(() => {
     void (async () => {
       const fromRoute = parseApiLearningPath(params.path);
-      if (fromRoute) {
-        setLearningPath(fromRoute);
-        return;
-      }
       const lang = await getPreferredLanguage();
-      setLearningPath(toApiLearningPath(lang ?? DEFAULT_LAUNCH_LANGUAGE));
+      const resolvedPath = fromRoute ?? toApiLearningPath(lang ?? DEFAULT_LAUNCH_LANGUAGE);
+      setLearningPath(resolvedPath);
+      setUserLevel(await getPreferredLevel(fromApiLearningPath(resolvedPath)));
     })();
   }, [params.path]);
 
@@ -474,7 +479,7 @@ export default function ConversationScreen() {
     );
   }
 
-  if (!learningPath) {
+  if (!learningPath || !userLevel) {
     return (
       <GradientBackground>
         <View style={[styles.center, { padding: spacing.xl }]}>
@@ -490,6 +495,7 @@ export default function ConversationScreen() {
       userId={user.id}
       accessToken={session.access_token}
       learningPath={learningPath}
+      userLevel={userLevel}
       coachingFocus={typeof params.focus === 'string' ? params.focus : undefined}
       coachingMission={typeof params.mission === 'string' ? params.mission : undefined}
     />
@@ -516,6 +522,10 @@ const styles = StyleSheet.create({
   overline: {
     letterSpacing: 1.4,
     textTransform: 'uppercase',
+  },
+  levelHint: {
+    color: palette.cyan,
+    fontWeight: '700',
   },
   orb: {
     alignItems: 'center',

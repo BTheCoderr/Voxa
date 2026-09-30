@@ -42,7 +42,7 @@ export default function GoalsScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <VoxaText variant="caption" style={styles.overline}>
-            Step 2 of 3
+            Step 2 of 4
           </VoxaText>
           <VoxaText variant="title">What do you want to feel better at?</VoxaText>
           <VoxaText variant="body">Pick the outcome that matches your next 30 days — you can change this anytime.</VoxaText>
@@ -77,7 +77,7 @@ export default function GoalsScreen() {
           onPress={async () => {
             if (!selected) return;
             await setLearningGoal(selected);
-            router.push('/(onboarding)/microphone');
+            router.push('/(onboarding)/level');
           }}
         />
         <BetaDisclaimer compact />

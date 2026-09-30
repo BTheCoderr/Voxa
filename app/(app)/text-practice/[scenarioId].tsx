@@ -42,16 +42,16 @@ import {
   parseApiLearningPath,
   textPracticeOverline,
 } from '@/lib/learningPath/display';
-import { getPreferredLanguage } from '@/lib/preferences/storage';
+import { getPreferredLanguage, getPreferredLevel } from '@/lib/preferences/storage';
 import { savePersonalizedMission } from '@/lib/practice/coachPlan';
+import { practiceLevelLabel } from '@/lib/progress/adaptiveDifficulty';
 import { useProgress } from '@/lib/progress/useProgress';
-import { toApiLearningPath } from '@/lib/realtime/learningPath';
+import { fromApiLearningPath, toApiLearningPath } from '@/lib/realtime/learningPath';
 import type { UserLevel } from '@/lib/realtime/types';
 import { supabase } from '@/lib/supabase/client';
 import { fetchTtsAudio, getTtsUserErrorMessage, playBase64Audio } from '@/lib/tts/elevenLabsTts';
 
 const XP_FOR_SESSION = 20;
-const USER_LEVEL: UserLevel = 'intermediate';
 
 function formatDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
@@ -70,6 +70,7 @@ type TextSessionActiveProps = {
   accessToken: string;
   learningPath: ReturnType<typeof toApiLearningPath>;
   pathOverline: string;
+  userLevel: UserLevel;
   coachingFocus?: string;
   coachingMission?: string;
 };
@@ -80,6 +81,7 @@ function TextSessionActive({
   accessToken,
   learningPath,
   pathOverline,
+  userLevel,
   coachingFocus,
   coachingMission,
 }: TextSessionActiveProps) {
@@ -142,7 +144,7 @@ function TextSessionActive({
         scenarioId: scenario.id,
         scenarioTitle: scenario.title,
         learningPath,
-        userLevel: USER_LEVEL,
+        userLevel,
       });
       conversationIdRef.current = row.id;
       return true;
@@ -151,7 +153,7 @@ function TextSessionActive({
       Alert.alert('Could not start', 'We could not create your session record. Check your connection.');
       return false;
     }
-  }, [userId, scenario, learningPath]);
+  }, [userId, scenario, learningPath, userLevel]);
 
   const persistMessage = useCallback(
     async (role: 'user' | 'assistant', text: string, clientMessageId: string) => {
@@ -249,7 +251,7 @@ function TextSessionActive({
         {
           scenarioId: scenario.id,
           learningPath,
-          userLevel: USER_LEVEL,
+          userLevel,
           sessionGoal,
           messages: [...coachMessages, { role: 'user', content: text }],
         },
@@ -292,6 +294,7 @@ function TextSessionActive({
     learningPath,
     accessToken,
     sessionGoal,
+    userLevel,
   ]);
 
   const playAssistantVoice = useCallback(async () => {
@@ -362,7 +365,7 @@ function TextSessionActive({
           {
             scenarioId: scenario.id,
             learningPath,
-            userLevel: USER_LEVEL,
+            userLevel,
             sessionGoal,
             messages: messages.map((message) => ({
               role: message.role,
@@ -430,7 +433,7 @@ function TextSessionActive({
       coach_review: Boolean(review),
     });
     setReviewing(false);
-  }, [accessToken, addXpFromSession, learningPath, messages, scenario, sessionGoal, startedAt, userId]);
+  }, [accessToken, addXpFromSession, learningPath, messages, scenario, sessionGoal, startedAt, userId, userLevel]);
 
   const showRecap = sessionSummary !== null && sessionReview !== null;
 
@@ -475,6 +478,9 @@ function TextSessionActive({
             </VoxaText>
             <VoxaText variant="title">{scenario.title}</VoxaText>
             <VoxaText variant="muted">{scenario.subtitle}</VoxaText>
+            <VoxaText variant="caption" style={styles.levelHint}>
+              {practiceLevelLabel(userLevel)} · adaptive coaching
+            </VoxaText>
             <BetaDisclaimer compact />
           </View>
 
@@ -602,16 +608,15 @@ export default function TextPracticeScreen() {
   const scenario = useMemo(() => getScenario(params.scenarioId as ScenarioId), [params.scenarioId]);
   const { session, user } = useAuth();
   const [learningPath, setLearningPath] = useState<ReturnType<typeof toApiLearningPath> | null>(null);
+  const [userLevel, setUserLevel] = useState<UserLevel | null>(null);
 
   useEffect(() => {
     void (async () => {
       const fromRoute = parseApiLearningPath(params.path);
-      if (fromRoute) {
-        setLearningPath(fromRoute);
-        return;
-      }
       const lang = await getPreferredLanguage();
-      setLearningPath(toApiLearningPath(lang ?? DEFAULT_LAUNCH_LANGUAGE));
+      const resolvedPath = fromRoute ?? toApiLearningPath(lang ?? DEFAULT_LAUNCH_LANGUAGE);
+      setLearningPath(resolvedPath);
+      setUserLevel(await getPreferredLevel(fromApiLearningPath(resolvedPath)));
     })();
   }, [params.path]);
 
@@ -642,7 +647,7 @@ export default function TextPracticeScreen() {
     );
   }
 
-  if (!learningPath) {
+  if (!learningPath || !userLevel) {
     return (
       <GradientBackground>
         <View style={[styles.center, { padding: spacing.xl }]}>
@@ -659,6 +664,7 @@ export default function TextPracticeScreen() {
       accessToken={session.access_token}
       learningPath={learningPath}
       pathOverline={pathOverline}
+      userLevel={userLevel}
       coachingFocus={typeof params.focus === 'string' ? params.focus : undefined}
       coachingMission={typeof params.mission === 'string' ? params.mission : undefined}
     />
@@ -688,6 +694,10 @@ const styles = StyleSheet.create({
   },
   panel: {
     marginTop: spacing.xs,
+  },
+  levelHint: {
+    color: palette.cyan,
+    fontWeight: '700',
   },
   helperMuted: {
     marginTop: spacing.sm,

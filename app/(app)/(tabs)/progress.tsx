@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AdaptiveDifficultyCard } from '@/components/progress/AdaptiveDifficultyCard';
 import { CoachMemoryCard } from '@/components/progress/CoachMemoryCard';
 import { CorrectionMasterySnapshot } from '@/components/progress/CorrectionMasterySnapshot';
 import { WeeklyCoachPlanCard } from '@/components/progress/WeeklyCoachPlanCard';
@@ -17,11 +18,21 @@ import { palette, radii, spacing } from '@/constants/theme';
 import { openScenarioPractice } from '@/lib/ai/openPractice';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
+  getAdaptiveDifficultyData,
   getCorrectionMasteryData,
   getRecentReviewedConversations,
+  type AdaptiveDifficultyData,
 } from '@/lib/db/conversations';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
-import { getPreferredLanguage } from '@/lib/preferences/storage';
+import {
+  getPreferredLanguage,
+  getPreferredLevel,
+  setPreferredLevel,
+} from '@/lib/preferences/storage';
+import {
+  buildDifficultyRecommendation,
+  type DifficultyRecommendation,
+} from '@/lib/progress/adaptiveDifficulty';
 import { buildLearnerCoachMemory, type LearnerCoachMemory } from '@/lib/progress/coachMemory';
 import {
   buildCorrectionMastery,
@@ -36,6 +47,7 @@ import {
 import { toApiLearningPath } from '@/lib/realtime/learningPath';
 import { supabase } from '@/lib/supabase/client';
 import { useProgress } from '@/lib/progress/useProgress';
+import type { UserLevel } from '@/lib/realtime/types';
 
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
@@ -45,6 +57,10 @@ export default function ProgressScreen() {
   const [correctionMastery, setCorrectionMastery] =
     useState<CorrectionMasterySummary | null>(null);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyCoachPlan | null>(null);
+  const [adaptiveData, setAdaptiveData] = useState<AdaptiveDifficultyData | null>(null);
+  const [difficultyRecommendation, setDifficultyRecommendation] =
+    useState<DifficultyRecommendation | null>(null);
+  const [practiceLevel, setPracticeLevelState] = useState<UserLevel>('intermediate');
   const [memoryLanguage, setMemoryLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
 
   useFocusEffect(
@@ -57,15 +73,20 @@ export default function ProgressScreen() {
             setCoachMemory(null);
             setCorrectionMastery(null);
             setWeeklyPlan(null);
+            setAdaptiveData(null);
+            setDifficultyRecommendation(null);
             setWeeklyPlan(null);
+            setAdaptiveData(null);
+            setDifficultyRecommendation(null);
           }
           return;
         }
 
         try {
           const storedLanguage = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
+          const selectedLevel = await getPreferredLevel(storedLanguage);
           const learningPath = toApiLearningPath(storedLanguage);
-          const [rows, masteryData, loadedWeeklyPlan] = await Promise.all([
+          const [rows, masteryData, loadedWeeklyPlan, loadedAdaptiveData] = await Promise.all([
             getRecentReviewedConversations(
               supabase,
               user.id,
@@ -83,12 +104,23 @@ export default function ProgressScreen() {
               user.id,
               learningPath,
             ),
+            getAdaptiveDifficultyData(
+              supabase,
+              user.id,
+              learningPath,
+              8,
+            ),
           ]);
           if (!active) return;
           setMemoryLanguage(storedLanguage);
+          setPracticeLevelState(selectedLevel);
           setCoachMemory(buildLearnerCoachMemory(rows));
           setCorrectionMastery(buildCorrectionMastery(masteryData));
           setWeeklyPlan(loadedWeeklyPlan);
+          setAdaptiveData(loadedAdaptiveData);
+          setDifficultyRecommendation(
+            buildDifficultyRecommendation(loadedAdaptiveData, selectedLevel),
+          );
         } catch (error) {
           console.warn('loadProgressCoaching', error);
           if (active) {
@@ -132,7 +164,7 @@ export default function ProgressScreen() {
         <GlassPanel style={styles.levelCard} intensity={34}>
           <View style={styles.levelTop}>
             <View style={styles.levelCopy}>
-              <VoxaText variant="caption">Current level</VoxaText>
+              <VoxaText variant="caption">Coach stage</VoxaText>
               <VoxaText variant="title" style={styles.levelName}>
                 {level.current.name}
               </VoxaText>
@@ -186,6 +218,28 @@ export default function ProgressScreen() {
           </GlassPanel>
         </View>
 
+        {user && difficultyRecommendation ? (
+          <>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Practice difficulty
+            </VoxaText>
+            <AdaptiveDifficultyCard
+              recommendation={difficultyRecommendation}
+              onApplySuggested={() => {
+                const nextLevel = difficultyRecommendation.suggestedLevel;
+                if (!nextLevel) return;
+                setPracticeLevelState(nextLevel);
+                void setPreferredLevel(memoryLanguage, nextLevel);
+                if (adaptiveData) {
+                  setDifficultyRecommendation(
+                    buildDifficultyRecommendation(adaptiveData, nextLevel),
+                  );
+                }
+              }}
+            />
+          </>
+        ) : null}
+
         {user && weeklyPlan ? (
           <>
             <VoxaText variant="lead" style={styles.sectionTitle}>
@@ -194,6 +248,13 @@ export default function ProgressScreen() {
             <WeeklyCoachPlanCard
               plan={weeklyPlan}
               languageLabel={launchLanguageLabel(memoryLanguage)}
+              levelLabel={
+                practiceLevel === 'beginner'
+                  ? 'Beginner'
+                  : practiceLevel === 'advanced'
+                    ? 'Advanced'
+                    : 'Intermediate'
+              }
               onStart={(item: WeeklyCoachPlanItem) =>
                 openScenarioPractice(item.scenarioId, memoryLanguage, {
                   focus: item.focus,

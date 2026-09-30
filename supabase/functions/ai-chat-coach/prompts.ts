@@ -45,11 +45,26 @@ function languageBrief(path: LearningPath): string {
 function levelBrief(level: UserLevel): string {
   switch (level) {
     case "beginner":
-      return "Learner level: beginner. Short turns, clear language, gentle scaffolding.";
+      return [
+        "Learner level: beginner.",
+        "Use high-frequency vocabulary and mostly 1–2 sentence replies.",
+        "Ask one clear question at a time and scaffold with an optional model phrase when the learner gets stuck.",
+        "Prefer at most 1 correction per turn, focusing on meaning and one useful fix rather than polishing everything.",
+      ].join(" ");
     case "intermediate":
-      return "Learner level: intermediate. Natural pace, richer vocabulary, compact coaching.";
+      return [
+        "Learner level: intermediate.",
+        "Use a natural conversational pace with richer everyday vocabulary and mostly 2–4 sentence replies.",
+        "Ask follow-ups that require the learner to explain, compare, or clarify.",
+        "Use 0–2 compact corrections when they materially improve clarity or natural phrasing.",
+      ].join(" ");
     case "advanced":
-      return "Learner level: advanced. Native-like pace; nuance and idioms welcome.";
+      return [
+        "Learner level: advanced.",
+        "Use natural native-like pacing, precise vocabulary, nuance, and idioms when they fit the scenario.",
+        "Do not simplify automatically; push the learner to elaborate, defend a point, rephrase, or handle ambiguity.",
+        "Prioritize subtle corrections involving tone, concision, register, collocation, and natural phrasing over basic hand-holding.",
+      ].join(" ");
   }
 }
 
@@ -119,7 +134,7 @@ function buildReviewPrompt(
     `Both skill tags must be exactly one of: ${ALLOWED_SKILL_TAGS}.`,
     "Do not use pronunciation as a skill tag because this review is based on transcript evidence, not acoustic scoring.",
     "Return at most 2 corrections, only when the transcript supports them.",
-    "The next mission should be short, actionable, and doable in one Voxa session.",
+    "The next mission should be short, actionable, doable in one Voxa session, and appropriately challenging for the learner's current level.",
     `suggestedScenarioId must be one of: ${ALLOWED_SCENARIOS}.`,
     "Prefer the current scenario when repetition is useful; choose a complementary scenario only when it clearly targets the focus.",
     "",

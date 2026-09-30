@@ -49,6 +49,17 @@ export type WeeklyCompletedConversation = Pick<
   'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'ended_at'
 >;
 
+export type AdaptiveDifficultyConversation = Pick<
+  ConversationRow,
+  'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'user_level' | 'ended_at'
+>;
+
+export type AdaptiveDifficultyData = {
+  conversations: AdaptiveDifficultyConversation[];
+  userMessageConversationIds: string[];
+  correctionConversationIds: string[];
+};
+
 export type CorrectionMasteryConversation = Pick<
   ConversationRow,
   'id' | 'scenario_id' | 'scenario_title' | 'learning_path' | 'ended_at'
@@ -327,4 +338,61 @@ export async function getCompletedConversationsBetween(
 
   if (error) throw error;
   return data ?? [];
+}
+
+
+export async function getAdaptiveDifficultyData(
+  client: SupabaseClient<Database>,
+  userId: string,
+  learningPath: ApiLearningPath,
+  limit = 8,
+): Promise<AdaptiveDifficultyData> {
+  const { data: conversations, error: conversationError } = await client
+    .from('conversations')
+    .select('id, scenario_id, scenario_title, learning_path, user_level, ended_at')
+    .eq('user_id', userId)
+    .eq('status', 'completed')
+    .eq('learning_path', learningPath)
+    .not('ended_at', 'is', null)
+    .order('ended_at', { ascending: false })
+    .limit(limit);
+
+  if (conversationError) throw conversationError;
+
+  const completed = conversations ?? [];
+  if (completed.length === 0) {
+    return {
+      conversations: [],
+      userMessageConversationIds: [],
+      correctionConversationIds: [],
+    };
+  }
+
+  const conversationIds = completed.map((conversation) => conversation.id);
+  const [
+    { data: userMessages, error: userMessageError },
+    { data: corrections, error: correctionError },
+  ] = await Promise.all([
+    client
+      .from('conversation_messages')
+      .select('conversation_id')
+      .eq('user_id', userId)
+      .eq('role', 'user')
+      .eq('is_final', true)
+      .in('conversation_id', conversationIds),
+    client
+      .from('corrections')
+      .select('conversation_id')
+      .eq('user_id', userId)
+      .in('conversation_id', conversationIds),
+  ]);
+
+  if (userMessageError) throw userMessageError;
+  if (correctionError) throw correctionError;
+
+  return {
+    conversations: completed,
+    userMessageConversationIds: (userMessages ?? []).map((row) => row.conversation_id),
+    correctionConversationIds: (corrections ?? []).map((row) => row.conversation_id),
+  };
 }

@@ -16,7 +16,7 @@ export default function MicrophoneScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <VoxaText variant="caption" style={styles.overline}>
-            Step 3 of 3
+            Step 4 of 4
           </VoxaText>
           <VoxaText variant="title">Your voice is the practice space</VoxaText>
           <VoxaText variant="body">
