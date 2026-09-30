@@ -204,6 +204,7 @@ function TextSessionActive({
     conversationIdRef.current = null;
     sessionEndedRef.current = false;
     lastAiMetaRef.current = {};
+    setReviewing(false);
 
     if (!env.aiChatCoachConfigured) {
       setErrorMessage(
@@ -403,7 +404,11 @@ function TextSessionActive({
     }
 
     if (hadMessages) {
-      await addXpFromSession(xpEarned, { conversationId: cid ?? undefined, source: 'text_session' });
+      try {
+        await addXpFromSession(xpEarned, { conversationId: cid ?? undefined, source: 'text_session' });
+      } catch (e) {
+        console.warn('addXpFromSession', e);
+      }
     }
 
     trackEvent('text_session_completed', {
