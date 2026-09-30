@@ -111,19 +111,19 @@ export default function PracticeHomeScreen() {
           <GlassPanel style={styles.momentumStrip}>
             <View style={styles.momentumRow}>
               <View style={styles.momentumMetric}>
-              <VoxaText variant="caption">Level</VoxaText>
-              <VoxaText variant="lead" style={styles.metricValue}>
-                {level.current.name}
-              </VoxaText>
-            </View>
-            <View style={styles.momentumDivider} />
-            <View style={styles.momentumMetric}>
-              <VoxaText variant="caption">Streak</VoxaText>
-              <VoxaText variant="lead" style={styles.metricValue}>
-                {progress?.streak ?? 0}d
-              </VoxaText>
-            </View>
-            <View style={styles.momentumDivider} />
+                <VoxaText variant="caption">Level</VoxaText>
+                <VoxaText variant="lead" style={styles.metricValue}>
+                  {level.current.name}
+                </VoxaText>
+              </View>
+              <View style={styles.momentumDivider} />
+              <View style={styles.momentumMetric}>
+                <VoxaText variant="caption">Streak</VoxaText>
+                <VoxaText variant="lead" style={styles.metricValue}>
+                  {progress?.streak ?? 0}d
+                </VoxaText>
+              </View>
+              <View style={styles.momentumDivider} />
               <View style={styles.momentumMetric}>
                 <VoxaText variant="caption">XP</VoxaText>
                 <VoxaText variant="lead" style={styles.metricValue}>
