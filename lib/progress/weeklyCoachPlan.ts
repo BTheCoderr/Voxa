@@ -1,11 +1,24 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getScenario, SCENARIOS, type ScenarioId } from '@/constants/scenarios';
-import type { WeeklyCompletedConversation } from '@/lib/db/conversations';
+import {
+  getCompletedConversationsBetween,
+  getCorrectionMasteryData,
+  getRecentReviewedConversations,
+  type WeeklyCompletedConversation,
+} from '@/lib/db/conversations';
+import type { Database } from '@/lib/db/database.types';
 import { coachSkillLabel } from '@/lib/progress/coachSkills';
-import type { LearnerCoachMemory } from '@/lib/progress/coachMemory';
-import type {
-  CorrectionMasteryPattern,
-  CorrectionMasterySummary,
+import {
+  buildLearnerCoachMemory,
+  type LearnerCoachMemory,
+} from '@/lib/progress/coachMemory';
+import {
+  buildCorrectionMastery,
+  type CorrectionMasteryPattern,
+  type CorrectionMasterySummary,
 } from '@/lib/progress/correctionMastery';
+import type { ApiLearningPath } from '@/lib/realtime/learningPath';
 
 export type WeeklyCoachPlanSource = 'coach_memory' | 'correction_mastery' | 'range' | 'foundation';
 
@@ -273,4 +286,35 @@ export function buildWeeklyCoachPlan(args: {
     headline,
     summary,
   };
+}
+
+
+export async function loadWeeklyCoachPlan(
+  client: SupabaseClient<Database>,
+  userId: string,
+  learningPath: ApiLearningPath,
+  now = new Date(),
+): Promise<WeeklyCoachPlan> {
+  const week = getLocalWeekBounds(now);
+  const weekStartIso = week.start.toISOString();
+  const weekEndIso = week.end.toISOString();
+
+  const [reviewRows, masteryData, completedThisWeek] = await Promise.all([
+    getRecentReviewedConversations(client, userId, learningPath, 10, weekStartIso),
+    getCorrectionMasteryData(client, userId, learningPath, 30, weekStartIso),
+    getCompletedConversationsBetween(
+      client,
+      userId,
+      learningPath,
+      weekStartIso,
+      weekEndIso,
+    ),
+  ]);
+
+  return buildWeeklyCoachPlan({
+    memory: buildLearnerCoachMemory(reviewRows),
+    mastery: buildCorrectionMastery(masteryData),
+    completedThisWeek,
+    week,
+  });
 }
