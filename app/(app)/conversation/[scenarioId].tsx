@@ -187,7 +187,7 @@ function ConversationSessionActive({
       onTranscriptPersist,
       onCorrectionPersist,
     };
-  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist, sessionGoal]);
+  }, [scenario, accessToken, learningPath, onTranscriptPersist, onCorrectionPersist, sessionGoal, userLevel]);
 
   const { phase, errorMessage, messages, corrections, muted, startSession, endSession, toggleMute } =
     useVoxaVoiceSession(voiceParams);
@@ -216,7 +216,7 @@ function ConversationSessionActive({
       }
     }
     await startSession();
-  }, [learningPath, scenario, startSession, userId]);
+  }, [learningPath, scenario, startSession, userId, userLevel]);
 
   const onEnd = useCallback(async () => {
     setClosing(true);
@@ -307,7 +307,7 @@ function ConversationSessionActive({
     } finally {
       setClosing(false);
     }
-  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, sessionGoal, userId]);
+  }, [accessToken, addXpFromSession, corrections.length, endSession, learningPath, messages, scenario, sessionGoal, userId, userLevel]);
 
   const showPostSummary = phase === 'ended' && sessionReview && sessionStats;
   const busyStarting =
