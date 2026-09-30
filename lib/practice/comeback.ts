@@ -181,7 +181,7 @@ export async function isComebackNudgeDismissedToday(
 
   try {
     const parsed = JSON.parse(raw) as DismissedState;
-    return parsed.id === nudge.id && parsed.dayKey === localDayKey(now);
+    return parsed.dayKey === localDayKey(now);
   } catch {
     return false;
   }
