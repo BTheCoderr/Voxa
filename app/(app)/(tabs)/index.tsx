@@ -66,8 +66,10 @@ export default function PracticeHomeScreen() {
   const dailyMission = useMemo(() => getDailyMission(filtered), [filtered]);
   const personalizedScenario = useMemo(() => {
     if (!personalizedMission) return null;
-    return getScenario(personalizedMission.scenarioId as ScenarioId) ?? null;
-  }, [personalizedMission]);
+    const scenario = getScenario(personalizedMission.scenarioId as ScenarioId);
+    if (!scenario || !scenario.languages.includes(effectiveLanguage)) return null;
+    return scenario;
+  }, [effectiveLanguage, personalizedMission]);
   const coachMission = personalizedScenario ?? dailyMission;
   const level = getCoachLevel(progress?.xp ?? 0);
   const completedToday = wasActiveToday(progress?.lastDay);
