@@ -397,6 +397,7 @@ function TextSessionActive({
           status: 'completed',
           aiProviderUsed: lastAiMetaRef.current.providerUsed ?? null,
           aiUsedFallback: lastAiMetaRef.current.usedFallback ?? null,
+          coachReview: review,
         });
       } catch (e) {
         console.warn('completeConversation', e);
