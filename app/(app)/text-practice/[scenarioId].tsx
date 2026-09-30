@@ -490,7 +490,12 @@ function TextSessionActive({
                 const next = getScenario(sessionReview.suggestedScenarioId as ScenarioId) ?? scenario;
                 router.replace({
                   pathname: '/(app)/text-practice/[scenarioId]',
-                  params: { scenarioId: next.id, path: learningPath },
+                  params: {
+                    scenarioId: next.id,
+                    path: learningPath,
+                    focus: sessionReview.focus,
+                    mission: sessionReview.nextMission,
+                  },
                 });
               }}
               onHistory={() => router.push('/(app)/history')}
