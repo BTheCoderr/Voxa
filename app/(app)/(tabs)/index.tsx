@@ -109,7 +109,8 @@ export default function PracticeHomeScreen() {
           accessibilityLabel="Open progress"
           onPress={() => router.push('/(app)/(tabs)/progress')}>
           <GlassPanel style={styles.momentumStrip}>
-            <View style={styles.momentumMetric}>
+            <View style={styles.momentumRow}>
+              <View style={styles.momentumMetric}>
               <VoxaText variant="caption">Level</VoxaText>
               <VoxaText variant="lead" style={styles.metricValue}>
                 {level.current.name}
@@ -123,11 +124,12 @@ export default function PracticeHomeScreen() {
               </VoxaText>
             </View>
             <View style={styles.momentumDivider} />
-            <View style={styles.momentumMetric}>
-              <VoxaText variant="caption">XP</VoxaText>
-              <VoxaText variant="lead" style={styles.metricValue}>
-                {progress?.xp ?? 0}
-              </VoxaText>
+              <View style={styles.momentumMetric}>
+                <VoxaText variant="caption">XP</VoxaText>
+                <VoxaText variant="lead" style={styles.metricValue}>
+                  {progress?.xp ?? 0}
+                </VoxaText>
+              </View>
             </View>
           </GlassPanel>
         </Pressable>
@@ -245,6 +247,11 @@ const styles = StyleSheet.create({
   },
   momentumStrip: {
     marginTop: spacing.lg,
+  },
+  momentumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
   },
   momentumMetric: {
     flex: 1,
