@@ -7,18 +7,35 @@
  *   GEMINI_API_KEY      — fallback when groq fails; primary when provider is gemini
  *   GROQ_MODEL          — optional (default llama-3.1-8b-instant)
  *   GEMINI_MODEL        — optional (default gemini-2.0-flash-lite)
+ *   AI_DAILY_MESSAGE_LIMIT — optional (default 20)
+ *   AI_DAILY_SESSION_LIMIT — optional (default 5)
+ *   AI_MAX_INPUT_CHARS     — optional (default 1500)
+ *   AI_MAX_OUTPUT_TOKENS   — optional (default 1024)
  *
- * GET (health): returns provider status without exposing keys.
+ * POST requires a signed-in user JWT. Daily quotas enforced server-side.
  */
 
 import { buildCoachSystemPrompt } from "./prompts.ts";
 import { callGeminiCoach } from "./providers/gemini.ts";
 import { callGroqCoach } from "./providers/groq.ts";
 import type { ChatCoachResponse } from "./providers/types.ts";
+import {
+  AI_DAILY_LIMIT_MESSAGE,
+  envInt,
+  getCompletedSessionsToday,
+  getDailyMessageCount,
+  incrementDailyMessageCount,
+  isNewSessionStart,
+  resolveUserId,
+} from "./usage.ts";
 
 const LEARNING_PATHS = new Set(["business_english", "spanish", "mandarin"]);
 const USER_LEVELS = new Set(["beginner", "intermediate", "advanced"]);
 const COACH_TIMEOUT_MS = 25_000;
+const DEFAULT_AI_DAILY_MESSAGE_LIMIT = 20;
+const DEFAULT_AI_DAILY_SESSION_LIMIT = 5;
+const DEFAULT_AI_MAX_INPUT_CHARS = 1500;
+const DEFAULT_AI_MAX_OUTPUT_TOKENS = 1024;
 
 type LearningPath = "business_english" | "spanish" | "mandarin";
 type UserLevel = "beginner" | "intermediate" | "advanced";
@@ -58,7 +75,7 @@ class ValidationError extends Error {
   }
 }
 
-function parseBody(raw: string): CoachRequest {
+function parseBody(raw: string, maxInputChars: number): CoachRequest {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -104,6 +121,9 @@ function parseBody(raw: string): CoachRequest {
     }
     if (typeof msg.content !== "string" || !msg.content.trim()) {
       throw new ValidationError("Message `content` must be a non-empty string");
+    }
+    if (msg.content.length > maxInputChars) {
+      throw new ValidationError(`Message exceeds ${maxInputChars} characters`);
     }
     normalized.push({ role: msg.role, content: msg.content.trim() });
   }
@@ -173,8 +193,9 @@ async function callProvider(
   name: ProviderName,
   body: CoachRequest,
   systemPrompt: string,
+  maxOutputTokens: number,
 ): Promise<ChatCoachResponse> {
-  const params = { ...body, systemPrompt };
+  const params = { ...body, systemPrompt, maxOutputTokens };
 
   if (name === "groq") {
     const key = Deno.env.get("GROQ_API_KEY")?.trim();
@@ -192,6 +213,7 @@ async function callProvider(
 async function runCoachWithFallback(
   body: CoachRequest,
   systemPrompt: string,
+  maxOutputTokens: number,
 ): Promise<{ result: ChatCoachResponse; providerUsed: ProviderName; usedFallback: boolean }> {
   const primary = resolvePrimaryProvider();
   const fallback = resolveFallbackProvider(primary);
@@ -199,14 +221,20 @@ async function runCoachWithFallback(
   if (!providerConfigured(primary)) {
     if (providerConfigured(fallback)) {
       console.warn(`Primary provider ${primary} not configured; using ${fallback}`);
-      const result = await withTimeout(callProvider(fallback, body, systemPrompt), COACH_TIMEOUT_MS);
+      const result = await withTimeout(
+        callProvider(fallback, body, systemPrompt, maxOutputTokens),
+        COACH_TIMEOUT_MS,
+      );
       return { result, providerUsed: fallback, usedFallback: true };
     }
     throw new Error(`Server misconfiguration: no AI provider keys set`);
   }
 
   try {
-    const result = await withTimeout(callProvider(primary, body, systemPrompt), COACH_TIMEOUT_MS);
+    const result = await withTimeout(
+      callProvider(primary, body, systemPrompt, maxOutputTokens),
+      COACH_TIMEOUT_MS,
+    );
     return { result, providerUsed: primary, usedFallback: false };
   } catch (primaryError) {
     if (!providerConfigured(fallback) || !shouldFallbackToSecondary(primaryError)) {
@@ -216,7 +244,10 @@ async function runCoachWithFallback(
       `Primary provider ${primary} failed; falling back to ${fallback}:`,
       primaryError instanceof Error ? primaryError.message : primaryError,
     );
-    const result = await withTimeout(callProvider(fallback, body, systemPrompt), COACH_TIMEOUT_MS);
+    const result = await withTimeout(
+      callProvider(fallback, body, systemPrompt, maxOutputTokens),
+      COACH_TIMEOUT_MS,
+    );
     return { result, providerUsed: fallback, usedFallback: true };
   }
 }
@@ -256,15 +287,76 @@ Deno.serve(async (req) => {
     return errorResponse("Method not allowed", 405, "method_not_allowed");
   }
 
+  const userId = await resolveUserId(req);
+  if (!userId) {
+    return errorResponse("Sign in required to practice.", 401, "unauthorized");
+  }
+
+  const dailyMessageLimit = envInt("AI_DAILY_MESSAGE_LIMIT", DEFAULT_AI_DAILY_MESSAGE_LIMIT);
+  const dailySessionLimit = envInt("AI_DAILY_SESSION_LIMIT", DEFAULT_AI_DAILY_SESSION_LIMIT);
+  const maxInputChars = envInt("AI_MAX_INPUT_CHARS", DEFAULT_AI_MAX_INPUT_CHARS);
+  const maxOutputTokens = envInt("AI_MAX_OUTPUT_TOKENS", DEFAULT_AI_MAX_OUTPUT_TOKENS);
+
   let body: CoachRequest;
   try {
-    body = parseBody(await req.text());
+    body = parseBody(await req.text(), maxInputChars);
   } catch (e) {
     if (e instanceof ValidationError) {
       return errorResponse(e.message, 400, "invalid_payload");
     }
     return errorResponse("Could not read request body", 400, "invalid_body");
   }
+
+  const messageCount = await getDailyMessageCount(userId);
+  if (messageCount === null) {
+    return errorResponse(
+      "The AI coach is temporarily unavailable. Try again in a moment.",
+      503,
+      "usage_quota_error",
+    );
+  }
+  if (messageCount >= dailyMessageLimit) {
+    console.log(JSON.stringify({
+      event: "ai_coach_daily_message_limit",
+      userId,
+      messageCount,
+      dailyMessageLimit,
+      scenarioId: body.scenarioId,
+    }));
+    return errorResponse(AI_DAILY_LIMIT_MESSAGE, 429, "ai_daily_limit");
+  }
+
+  if (isNewSessionStart(body.messages)) {
+    const completedSessions = await getCompletedSessionsToday(userId);
+    if (completedSessions === null) {
+      return errorResponse(
+        "The AI coach is temporarily unavailable. Try again in a moment.",
+        503,
+        "usage_quota_error",
+      );
+    }
+    if (completedSessions >= dailySessionLimit) {
+      console.log(JSON.stringify({
+        event: "ai_coach_daily_session_limit",
+        userId,
+        completedSessions,
+        dailySessionLimit,
+        scenarioId: body.scenarioId,
+      }));
+      return errorResponse(AI_DAILY_LIMIT_MESSAGE, 429, "ai_daily_limit");
+    }
+  }
+
+  const lastUserMessage = [...body.messages].reverse().find((m) => m.role === "user");
+  console.log(JSON.stringify({
+    event: "ai_coach_request",
+    userId,
+    scenarioId: body.scenarioId,
+    learningPath: body.learningPath,
+    messageCountToday: messageCount,
+    userMessagesInPayload: body.messages.filter((m) => m.role === "user").length,
+    inputChars: lastUserMessage?.content.length ?? 0,
+  }));
 
   const systemPrompt = buildCoachSystemPrompt(
     body.scenarioId,
@@ -273,13 +365,32 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { result, providerUsed, usedFallback } = await runCoachWithFallback(body, systemPrompt);
+    const { result, providerUsed, usedFallback } = await runCoachWithFallback(
+      body,
+      systemPrompt,
+      maxOutputTokens,
+    );
+    await incrementDailyMessageCount(userId);
+    console.log(JSON.stringify({
+      event: "ai_coach_success",
+      userId,
+      scenarioId: body.scenarioId,
+      providerUsed,
+      usedFallback,
+      messageCountAfter: messageCount + 1,
+      replyLength: result.reply.length,
+    }));
     return jsonResponse({
       ...result,
       _meta: { providerUsed, usedFallback },
     });
   } catch (e) {
-    console.error("Coach provider error:", e);
+    console.error(JSON.stringify({
+      event: "ai_coach_provider_error",
+      userId,
+      scenarioId: body.scenarioId,
+      message: e instanceof Error ? e.message : String(e),
+    }));
     return errorResponse(
       "The AI coach is temporarily unavailable. Try again in a moment.",
       502,
