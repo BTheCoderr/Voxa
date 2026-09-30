@@ -1,10 +1,25 @@
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
-const REALTIME_SESSION_URL =
-  process.env.EXPO_PUBLIC_REALTIME_SESSION_URL ??
-  (SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/realtime-session` : '');
-const AI_CHAT_COACH_URL = process.env.EXPO_PUBLIC_AI_CHAT_COACH_URL ?? '';
-const ELEVENLABS_TTS_URL = process.env.EXPO_PUBLIC_ELEVENLABS_TTS_URL ?? '';
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
+
+function edgeFunctionUrl(slug: string, override?: string): string {
+  const explicit = override?.trim();
+  if (explicit) return explicit;
+  if (!SUPABASE_URL) return '';
+  return `${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/${slug}`;
+}
+
+const REALTIME_SESSION_URL = edgeFunctionUrl(
+  'realtime-session',
+  process.env.EXPO_PUBLIC_REALTIME_SESSION_URL,
+);
+const AI_CHAT_COACH_URL = edgeFunctionUrl(
+  'ai-chat-coach',
+  process.env.EXPO_PUBLIC_AI_CHAT_COACH_URL,
+);
+const ELEVENLABS_TTS_URL = edgeFunctionUrl(
+  'elevenlabs-tts',
+  process.env.EXPO_PUBLIC_ELEVENLABS_TTS_URL,
+);
 const AI_MODE_RAW = process.env.EXPO_PUBLIC_AI_MODE ?? 'text';
 
 export type AiMode = 'text' | 'voice';
@@ -17,7 +32,7 @@ export const env = {
   supabaseUrl: SUPABASE_URL,
   supabaseAnonKey: SUPABASE_ANON_KEY,
   supabaseConfigured: Boolean(SUPABASE_URL && SUPABASE_ANON_KEY),
-  /** `text` = Groq/Gemini via Edge Function (default). `voice` = OpenAI Realtime (premium/experimental). */
+  /** `text` = Groq/Gemini via Edge Function. `voice` = OpenAI Realtime. */
   aiMode: parseAiMode(AI_MODE_RAW),
   aiChatCoachUrl: AI_CHAT_COACH_URL,
   aiChatCoachConfigured: Boolean(AI_CHAT_COACH_URL),
