@@ -23,7 +23,7 @@ export default function ProgressScreen() {
   const xp = progress?.xp ?? 0;
   const streak = progress?.streak ?? 0;
   const level = getCoachLevel(xp);
-  const progressWidth = `${Math.round(level.progress * 100)}%`;
+  const progressWidth = `${Math.round(level.progress * 100)}%` as `${number}%`;
 
   return (
     <GradientBackground>
