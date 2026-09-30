@@ -18,37 +18,61 @@ import { getScenario, SCENARIOS, type LaunchLanguage, type ScenarioId } from '@/
 import { palette, spacing } from '@/constants/theme';
 import { trackEvent } from '@/lib/analytics/track';
 import { openScenarioPractice } from '@/lib/ai/openPractice';
+import { useAuth } from '@/lib/auth/AuthContext';
+import { getRecentReviewedConversations } from '@/lib/db/conversations';
 import { isTextPracticeMode, isVoicePracticeMode } from '@/lib/ai/mode';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import { isScreenshotMode } from '@/lib/presentation/screenshotMode';
 import { getPreferredLanguage, setPreferredLanguage } from '@/lib/preferences/storage';
 import {
+  buildMissionFromCoachMemory,
   loadPersonalizedMission,
   type PersonalizedMission,
 } from '@/lib/practice/coachPlan';
 import { getDailyMission, wasActiveToday } from '@/lib/practice/dailyMission';
+import { buildLearnerCoachMemory } from '@/lib/progress/coachMemory';
 import { getCoachLevel } from '@/lib/progress/levels';
 import { useProgress } from '@/lib/progress/useProgress';
+import { toApiLearningPath } from '@/lib/realtime/learningPath';
+import { supabase } from '@/lib/supabase/client';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function PracticeHomeScreen() {
   const insets = useSafeAreaInsets();
   const [language, setLanguage] = useState<LaunchLanguage | null | undefined>(undefined);
   const [personalizedMission, setPersonalizedMission] = useState<PersonalizedMission | null>(null);
+  const { user } = useAuth();
   const { progress, progressHydrated, refresh } = useProgress();
 
   useFocusEffect(
     useCallback(() => {
       void (async () => {
-        const [stored, plan] = await Promise.all([
+        const [stored, localPlan] = await Promise.all([
           getPreferredLanguage(),
           loadPersonalizedMission(),
         ]);
-        setLanguage(stored ?? DEFAULT_LAUNCH_LANGUAGE);
-        setPersonalizedMission(plan);
+        const selectedLanguage = stored ?? DEFAULT_LAUNCH_LANGUAGE;
+        let resolvedPlan = localPlan;
+
+        if (!resolvedPlan && user) {
+          try {
+            const rows = await getRecentReviewedConversations(
+              supabase,
+              user.id,
+              toApiLearningPath(selectedLanguage),
+              10,
+            );
+            resolvedPlan = buildMissionFromCoachMemory(buildLearnerCoachMemory(rows));
+          } catch (error) {
+            console.warn('loadCloudCoachMission', error);
+          }
+        }
+
+        setLanguage(selectedLanguage);
+        setPersonalizedMission(resolvedPlan);
         await refresh();
       })();
-    }, [refresh]),
+    }, [refresh, user?.id]),
   );
 
   const onLanguageChange = useCallback(async (lang: LaunchLanguage) => {

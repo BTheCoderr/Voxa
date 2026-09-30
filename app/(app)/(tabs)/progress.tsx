@@ -1,20 +1,66 @@
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CoachMemoryCard } from '@/components/progress/CoachMemoryCard';
 import { BetaDisclaimer } from '@/components/ui/BetaDisclaimer';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { GradientBackground } from '@/components/ui/GradientBackground';
 import { ScreenLoading } from '@/components/ui/ScreenStates';
 import { VoxaText } from '@/components/ui/VoxaText';
+import type { LaunchLanguage, ScenarioId } from '@/constants/scenarios';
 import { palette, radii, spacing } from '@/constants/theme';
+import { openScenarioPractice } from '@/lib/ai/openPractice';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { getRecentReviewedConversations } from '@/lib/db/conversations';
+import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
+import { getPreferredLanguage } from '@/lib/preferences/storage';
+import { buildLearnerCoachMemory, type LearnerCoachMemory } from '@/lib/progress/coachMemory';
 import { getCoachLevel } from '@/lib/progress/levels';
+import { toApiLearningPath } from '@/lib/realtime/learningPath';
+import { supabase } from '@/lib/supabase/client';
 import { useProgress } from '@/lib/progress/useProgress';
 
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { progress, progressHydrated } = useProgress();
+  const [coachMemory, setCoachMemory] = useState<LearnerCoachMemory | null>(null);
+  const [memoryLanguage, setMemoryLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+
+      void (async () => {
+        if (!user) {
+          if (active) setCoachMemory(null);
+          return;
+        }
+
+        try {
+          const storedLanguage = (await getPreferredLanguage()) ?? DEFAULT_LAUNCH_LANGUAGE;
+          const rows = await getRecentReviewedConversations(
+            supabase,
+            user.id,
+            toApiLearningPath(storedLanguage),
+            10,
+          );
+          if (!active) return;
+          setMemoryLanguage(storedLanguage);
+          setCoachMemory(buildLearnerCoachMemory(rows));
+        } catch (error) {
+          console.warn('loadCoachMemory', error);
+          if (active) setCoachMemory(null);
+        }
+      })();
+
+      return () => {
+        active = false;
+      };
+    }, [user?.id]),
+  );
 
   if (!progressHydrated) {
     return <ScreenLoading message="Loading progress…" />;
@@ -97,6 +143,21 @@ export default function ProgressScreen() {
             <VoxaText variant="muted">total XP</VoxaText>
           </GlassPanel>
         </View>
+
+        {user && coachMemory ? (
+          <>
+            <VoxaText variant="lead" style={styles.sectionTitle}>
+              Your coaching pattern
+            </VoxaText>
+            <CoachMemoryCard
+              memory={coachMemory}
+              languageLabel={launchLanguageLabel(memoryLanguage)}
+              onStartScenario={(scenarioId: ScenarioId) =>
+                openScenarioPractice(scenarioId, memoryLanguage)
+              }
+            />
+          </>
+        ) : null}
 
         <VoxaText variant="lead" style={styles.sectionTitle}>
           What matters here

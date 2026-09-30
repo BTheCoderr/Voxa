@@ -1,4 +1,23 @@
-import type { ChatCoachResponse, CoachProviderParams } from "./types.ts";
+import type { ChatCoachResponse, CoachProviderParams, CoachSkillTag } from "./types.ts";
+
+const COACH_SKILL_TAGS = new Set<CoachSkillTag>([
+  "clarity",
+  "grammar",
+  "vocabulary",
+  "fluency",
+  "natural_phrasing",
+  "professional_tone",
+  "response_building",
+  "conversation_flow",
+  "conciseness",
+  "politeness",
+]);
+
+function parseSkillTag(value: unknown, fallback: CoachSkillTag): CoachSkillTag {
+  return typeof value === "string" && COACH_SKILL_TAGS.has(value as CoachSkillTag)
+    ? (value as CoachSkillTag)
+    : fallback;
+}
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -39,7 +58,9 @@ function parseCoachJson(raw: string): ChatCoachResponse {
       ? {
           headline: reviewRaw.headline.trim(),
           strength: reviewRaw.strength.trim(),
+          strengthTag: parseSkillTag(reviewRaw.strengthTag, "conversation_flow"),
           focus: reviewRaw.focus.trim(),
+          focusTag: parseSkillTag(reviewRaw.focusTag, "natural_phrasing"),
           nextMission: reviewRaw.nextMission.trim(),
           suggestedScenarioId: reviewRaw.suggestedScenarioId.trim(),
         }

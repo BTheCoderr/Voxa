@@ -1,4 +1,5 @@
 import { env } from '@/lib/env';
+import { isCoachSkillTag } from '@/lib/progress/coachSkills';
 import type {
   ChatCoachMessage,
   ChatCoachRequest,
@@ -102,13 +103,17 @@ export async function fetchChatCoachReply(
     reviewRaw &&
     typeof reviewRaw.headline === 'string' &&
     typeof reviewRaw.strength === 'string' &&
+    isCoachSkillTag(reviewRaw.strengthTag) &&
     typeof reviewRaw.focus === 'string' &&
+    isCoachSkillTag(reviewRaw.focusTag) &&
     typeof reviewRaw.nextMission === 'string' &&
     typeof reviewRaw.suggestedScenarioId === 'string'
       ? {
           headline: reviewRaw.headline.trim(),
           strength: reviewRaw.strength.trim(),
+          strengthTag: reviewRaw.strengthTag,
           focus: reviewRaw.focus.trim(),
+          focusTag: reviewRaw.focusTag,
           nextMission: reviewRaw.nextMission.trim(),
           suggestedScenarioId: reviewRaw.suggestedScenarioId.trim(),
         }

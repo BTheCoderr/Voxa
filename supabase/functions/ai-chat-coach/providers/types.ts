@@ -4,10 +4,24 @@ export type ChatCoachCorrection = {
   explanation: string;
 };
 
+export type CoachSkillTag =
+  | "clarity"
+  | "grammar"
+  | "vocabulary"
+  | "fluency"
+  | "natural_phrasing"
+  | "professional_tone"
+  | "response_building"
+  | "conversation_flow"
+  | "conciseness"
+  | "politeness";
+
 export type SessionCoachReview = {
   headline: string;
   strength: string;
+  strengthTag: CoachSkillTag;
   focus: string;
+  focusTag: CoachSkillTag;
   nextMission: string;
   suggestedScenarioId: string;
 };

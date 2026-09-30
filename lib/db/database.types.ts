@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export type ConversationStatus = 'active' | 'completed' | 'aborted';
 export type MessageRole = 'user' | 'assistant';
 
@@ -59,6 +67,7 @@ export type Database = {
           user_level: string;
           status: ConversationStatus;
           summary: string | null;
+          coach_review: Json | null;
           started_at: string;
           ended_at: string | null;
           xp_awarded: number;
@@ -74,6 +83,7 @@ export type Database = {
           user_level: string;
           status?: ConversationStatus;
           summary?: string | null;
+          coach_review?: Json | null;
           started_at?: string;
           ended_at?: string | null;
           xp_awarded?: number;
@@ -89,6 +99,7 @@ export type Database = {
           user_level?: string;
           status?: ConversationStatus;
           summary?: string | null;
+          coach_review?: Json | null;
           started_at?: string;
           ended_at?: string | null;
           xp_awarded?: number;
