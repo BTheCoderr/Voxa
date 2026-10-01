@@ -1,9 +1,5 @@
 # Voxa
 
-<p align="center">
-  <img src="docs/branding/github-social-preview.jpg" alt="Voxa AI product overview" width="100%" />
-</p>
-
 
 [![Mobile CI](https://github.com/BTheCoderr/Voxa/actions/workflows/mobile-ci.yml/badge.svg)](https://github.com/BTheCoderr/Voxa/actions/workflows/mobile-ci.yml)
 ![App Store](https://img.shields.io/badge/App%20Store-Live-000000?logo=apple)
