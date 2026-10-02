@@ -20,6 +20,10 @@ const ELEVENLABS_TTS_URL = edgeFunctionUrl(
   'elevenlabs-tts',
   process.env.EXPO_PUBLIC_ELEVENLABS_TTS_URL,
 );
+const DELETE_ACCOUNT_URL = edgeFunctionUrl(
+  'delete-account',
+  process.env.EXPO_PUBLIC_DELETE_ACCOUNT_URL,
+);
 const AI_MODE_RAW = process.env.EXPO_PUBLIC_AI_MODE ?? 'text';
 
 export type AiMode = 'text' | 'voice';
@@ -38,6 +42,8 @@ export const env = {
   aiChatCoachConfigured: Boolean(AI_CHAT_COACH_URL),
   elevenLabsTtsUrl: ELEVENLABS_TTS_URL,
   elevenLabsTtsConfigured: Boolean(ELEVENLABS_TTS_URL),
+  deleteAccountUrl: DELETE_ACCOUNT_URL,
+  deleteAccountConfigured: Boolean(DELETE_ACCOUNT_URL),
   posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '',
   posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com',
   revenueCatIos: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ?? '',
