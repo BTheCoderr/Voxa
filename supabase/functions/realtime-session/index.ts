@@ -12,7 +12,6 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-
 const OPENAI_REALTIME_URL = "https://api.openai.com/v1/realtime/sessions";
 const DEFAULT_MODEL = "gpt-4o-realtime-preview";
 const DEFAULT_DAILY_SESSION_LIMIT = 3;
@@ -61,9 +60,6 @@ Deno.serve(async (req) => {
   const { count, error: countError } = await admin.from("realtime_session_usage").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", quotaWindowStart);
   if (countError) { console.error(JSON.stringify({ event: "realtime_quota_read_failed", userId, message: countError.message })); return errorResponse("Realtime voice is temporarily unavailable", 503, "usage_quota_error"); }
   if ((count ?? 0) >= dailyLimit) return errorResponse("Daily realtime practice limit reached.", 429, "realtime_daily_limit");
-  // Reserve before contacting OpenAI. We intentionally keep failed reservations:
-  // fail-closed accounting prevents repeated provider failures from becoming an
-  // unbounded secret-mint/spend retry path.
   const { error: reserveError } = await admin.from("realtime_session_usage").insert({ user_id: userId, scenario_id: mint.scenarioId });
   if (reserveError) { console.error(JSON.stringify({ event: "realtime_quota_write_failed", userId, message: reserveError.message })); return errorResponse("Realtime voice is temporarily unavailable", 503, "usage_quota_error"); }
   const model = Deno.env.get("OPENAI_REALTIME_MODEL")?.trim() || DEFAULT_MODEL;
