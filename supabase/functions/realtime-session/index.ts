@@ -3,6 +3,8 @@
  *
  * Realtime voice is intentionally opt-in server-side. Set
  * VOXA_REALTIME_ENABLED=true only when the feature is ready to ship.
+ * Each mint attempt reserves one slot before contacting the provider; failed
+ * provider attempts remain counted so repeated failures cannot bypass spend limits.
  *
  * Secrets:
  *   OPENAI_API_KEY
