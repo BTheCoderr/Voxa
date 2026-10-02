@@ -8,7 +8,7 @@
  *   OPENAI_API_KEY
  *   OPENAI_REALTIME_MODEL (optional)
  *   VOXA_REALTIME_ENABLED (default false)
- *   REALTIME_DAILY_SESSION_LIMIT (default 3)
+ *   REALTIME_DAILY_SESSION_LIMIT (default 3; enforced over a rolling 24h window)
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
