@@ -123,9 +123,14 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
-  const today = new Date().toISOString().slice(0, 10);
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
   const dailyLimit = envInt("REALTIME_DAILY_SESSION_LIMIT", DEFAULT_DAILY_SESSION_LIMIT);
-  const { count, error: countError } = await admin.from("ai_usage_daily").select("*", { count: "exact", head: true }).eq("user_id", userId).eq("usage_date", today).eq("kind", "realtime_session");
+  const { count, error: countError } = await admin
+    .from("realtime_session_usage")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", startOfToday.toISOString());
   if (countError) {
     console.error(JSON.stringify({ event: "realtime_quota_read_failed", userId, message: countError.message }));
     return errorResponse("Realtime voice is temporarily unavailable", 503, "usage_quota_error");
@@ -159,8 +164,13 @@ Deno.serve(async (req) => {
   const sessionId = typeof data.id === "string" ? data.id : undefined;
   if (!secret || expiresAt === undefined || !sessionId) return errorResponse("Incomplete session from AI provider", 502, "openai_incomplete");
 
-  const { error: usageError } = await admin.from("ai_usage_daily").insert({ user_id: userId, usage_date: today, kind: "realtime_session" });
-  if (usageError) console.error(JSON.stringify({ event: "realtime_quota_write_failed", userId, message: usageError.message }));
+  const { error: usageError } = await admin
+    .from("realtime_session_usage")
+    .insert({ user_id: userId, scenario_id: mint.scenarioId });
+  if (usageError) {
+    console.error(JSON.stringify({ event: "realtime_quota_write_failed", userId, message: usageError.message }));
+    return errorResponse("Realtime voice is temporarily unavailable", 503, "usage_quota_error");
+  }
 
   return jsonResponse({ clientSecret: secret, expiresAt, sessionId, model: typeof data.model === "string" ? data.model : model });
 });
