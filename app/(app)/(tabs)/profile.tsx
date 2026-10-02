@@ -13,6 +13,7 @@ import { VoxaText } from '@/components/ui/VoxaText';
 import { type LaunchLanguage } from '@/constants/scenarios';
 import { palette, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { deleteCurrentAccount } from '@/lib/auth/deleteAccount';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import {
   getPreferredLanguage,
@@ -32,6 +33,35 @@ export default function ProfileScreen() {
   const [practiceLanguage, setPracticeLanguage] = useState<LaunchLanguage>(DEFAULT_LAUNCH_LANGUAGE);
   const [practiceLevel, setPracticeLevelState] = useState<UserLevel>('intermediate');
   const [coachNudgesEnabled, setCoachNudgesEnabledState] = useState(true);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const confirmDeleteAccount = useCallback(() => {
+    if (!user || deletingAccount) return;
+
+    Alert.alert(
+      'Delete Voxa account?',
+      'This permanently deletes your Voxa account and server-stored practice data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete account',
+          style: 'destructive',
+          onPress: () => {
+            setDeletingAccount(true);
+            void deleteCurrentAccount()
+              .then(() => {
+                Alert.alert('Account deleted', 'Your Voxa account has been permanently deleted.');
+              })
+              .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : 'Please try again.';
+                Alert.alert('Could not delete account', message);
+              })
+              .finally(() => setDeletingAccount(false));
+          },
+        },
+      ],
+    );
+  }, [deletingAccount, user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,15 +123,34 @@ export default function ProfileScreen() {
           {!user ? (
             <VoxaButton title="Sign in" onPress={() => router.push('/(auth)/sign-in')} containerStyle={styles.cta} />
           ) : (
-            <VoxaButton
-              variant="ghost"
-              title="Sign out"
-              containerStyle={styles.cta}
-              onPress={async () => {
-                await signOut();
-                Alert.alert('Signed out', 'Your device session has been cleared.');
-              }}
-            />
+            <>
+              <VoxaButton
+                variant="ghost"
+                title="Sign out"
+                containerStyle={styles.cta}
+                onPress={async () => {
+                  await signOut();
+                  Alert.alert('Signed out', 'Your device session has been cleared.');
+                }}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Permanently delete Voxa account"
+                disabled={deletingAccount}
+                onPress={confirmDeleteAccount}
+                style={({ pressed }) => [styles.deleteButton, pressed && styles.linkPressed]}>
+                {deletingAccount ? (
+                  <ActivityIndicator />
+                ) : (
+                  <VoxaText variant="body" style={styles.deleteText}>
+                    Delete account
+                  </VoxaText>
+                )}
+              </Pressable>
+              <VoxaText variant="caption" style={styles.deleteDetail}>
+                Permanently removes your Voxa account and server-stored practice data.
+              </VoxaText>
+            </>
           )}
         </GlassPanel>
 
@@ -300,6 +349,20 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.md,
+  },
+  deleteButton: {
+    minHeight: 48,
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteText: {
+    color: '#ff6b6b',
+    fontWeight: '700',
+  },
+  deleteDetail: {
+    textAlign: 'center',
+    opacity: 0.72,
   },
   debugHit: {
     marginTop: 'auto',
