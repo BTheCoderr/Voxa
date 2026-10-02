@@ -123,14 +123,13 @@ Deno.serve(async (req) => {
   }
 
   const admin = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
-  const startOfToday = new Date();
-  startOfToday.setUTCHours(0, 0, 0, 0);
+  const quotaWindowStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const dailyLimit = envInt("REALTIME_DAILY_SESSION_LIMIT", DEFAULT_DAILY_SESSION_LIMIT);
   const { count, error: countError } = await admin
     .from("realtime_session_usage")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
-    .gte("created_at", startOfToday.toISOString());
+    .gte("created_at", quotaWindowStart);
   if (countError) {
     console.error(JSON.stringify({ event: "realtime_quota_read_failed", userId, message: countError.message }));
     return errorResponse("Realtime voice is temporarily unavailable", 503, "usage_quota_error");
