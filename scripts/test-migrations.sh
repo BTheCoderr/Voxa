@@ -31,6 +31,7 @@ do \$\$ begin
   assert (select message_count from public.ai_coach_usage where usage_date = '2026-11-25') = 7, 'duplicates not folded';
   assert (select count(*) from public.ai_coach_usage) = 2, 'duplicate rows not removed';
   assert public.increment_ai_coach_usage('00000000-0000-0000-0000-0000000000cc', '2026-11-25') = 8, 'increment after fold';
+  assert public.increment_ai_coach_session('00000000-0000-0000-0000-0000000000cc', '2026-11-25') = 1, 'session_count added to legacy table';
 end \$\$;"
 echo 'legacy fold: ok'
 echo 'All migration checks passed.'

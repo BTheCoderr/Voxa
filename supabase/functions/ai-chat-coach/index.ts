@@ -8,7 +8,7 @@
  *   GROQ_MODEL          — optional (default llama-3.1-8b-instant)
  *   GEMINI_MODEL        — optional (default gemini-2.0-flash-lite)
  *   AI_DAILY_MESSAGE_LIMIT — optional (default 20)
- *   AI_DAILY_SESSION_LIMIT — optional (default 5)
+ *   AI_DAILY_SESSION_LIMIT — optional (default 5; sessions *started* per UTC day)
  *   AI_MAX_INPUT_CHARS     — optional (default 1500)
  *   AI_MAX_OUTPUT_TOKENS   — optional (default 1024)
  *
@@ -24,7 +24,9 @@ import {
   envInt,
   getCompletedSessionsToday,
   getDailyMessageCount,
+  getSessionsStartedToday,
   incrementDailyMessageCount,
+  incrementDailySessionCount,
   isNewSessionStart,
   resolveUserId,
 } from "./usage.ts";
@@ -345,20 +347,24 @@ Deno.serve(async (req) => {
     return errorResponse(AI_DAILY_LIMIT_MESSAGE, 429, "ai_daily_limit");
   }
 
-  if (body.mode === "practice" && isNewSessionStart(body.messages)) {
-    const completedSessions = await getCompletedSessionsToday(userId);
-    if (completedSessions === null) {
+  const startsNewSession = body.mode === "practice" && isNewSessionStart(body.messages);
+  if (startsNewSession) {
+    const started = await getSessionsStartedToday(userId);
+    const sessionsToday = started === "unsupported"
+      ? await getCompletedSessionsToday(userId)
+      : started;
+    if (sessionsToday === null) {
       return errorResponse(
         "The AI coach is temporarily unavailable. Try again in a moment.",
         503,
         "usage_quota_error",
       );
     }
-    if (completedSessions >= dailySessionLimit) {
+    if (sessionsToday >= dailySessionLimit) {
       console.log(JSON.stringify({
         event: "ai_coach_daily_session_limit",
         userId,
-        completedSessions,
+        sessionsToday,
         dailySessionLimit,
         scenarioId: body.scenarioId,
       }));
@@ -395,6 +401,7 @@ Deno.serve(async (req) => {
       maxOutputTokens,
     );
     await incrementDailyMessageCount(userId);
+    if (startsNewSession) await incrementDailySessionCount(userId);
     console.log(JSON.stringify({
       event: "ai_coach_success",
       userId,

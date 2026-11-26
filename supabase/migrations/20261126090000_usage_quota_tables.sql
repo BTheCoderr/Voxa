@@ -2,7 +2,8 @@
 --
 -- `ai_coach_usage` is read and written by `ai-chat-coach` (daily text-coach message quota),
 -- and `realtime_session_usage` by `realtime-session` (#23, rolling 24h voice quota), but
--- neither table was defined in the repo's migrations. This makes them reproducible.
+-- neither table was defined in the repo's migrations. This makes them reproducible, and
+-- adds a server-side session counter and a per-user daily TTS quota (`tts_usage`).
 --
 -- Safe to apply to a project where the tables were created by hand: every statement is
 -- idempotent and existing rows are preserved. Only the service role (Edge Functions)
@@ -86,6 +87,82 @@ revoke all on function public.increment_ai_coach_usage(uuid, date) from public;
 revoke all on function public.increment_ai_coach_usage(uuid, date) from anon, authenticated;
 grant execute on function public.increment_ai_coach_usage(uuid, date) to service_role;
 
+-- Sessions started per day, counted server-side when the first coach reply of a session
+-- succeeds. Replaces counting *completed* conversations, which abandoned sessions and
+-- client-side conversation deletes could bypass.
+alter table public.ai_coach_usage
+  add column if not exists session_count integer not null default 0 check (session_count >= 0);
+
+create or replace function public.increment_ai_coach_session(p_user_id uuid, p_usage_date date)
+returns integer
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  next_count integer;
+begin
+  insert into public.ai_coach_usage as u (user_id, usage_date, message_count, session_count)
+  values (p_user_id, p_usage_date, 0, 1)
+  on conflict (user_id, usage_date)
+  do update set session_count = u.session_count + 1
+  returning u.session_count into next_count;
+  return next_count;
+end;
+$$;
+
+revoke all on function public.increment_ai_coach_session(uuid, date) from public;
+revoke all on function public.increment_ai_coach_session(uuid, date) from anon, authenticated;
+grant execute on function public.increment_ai_coach_session(uuid, date) to service_role;
+
+-- ─── ElevenLabs TTS daily quota ─────────────────────────────────────────────
+create table if not exists public.tts_usage (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  usage_date date not null,
+  request_count integer not null default 0 check (request_count >= 0),
+  char_count integer not null default 0 check (char_count >= 0),
+  primary key (user_id, usage_date)
+);
+
+-- Atomically reserves one request of p_chars characters. Returns false (and changes
+-- nothing) when the request would exceed either daily limit.
+create or replace function public.consume_tts_quota(
+  p_user_id uuid,
+  p_usage_date date,
+  p_chars integer,
+  p_max_requests integer,
+  p_max_chars integer
+)
+returns boolean
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if p_chars is null or p_chars < 0 then
+    raise exception 'p_chars must be >= 0';
+  end if;
+
+  insert into public.tts_usage (user_id, usage_date)
+  values (p_user_id, p_usage_date)
+  on conflict (user_id, usage_date) do nothing;
+
+  update public.tts_usage
+  set request_count = request_count + 1,
+      char_count = char_count + p_chars
+  where user_id = p_user_id
+    and usage_date = p_usage_date
+    and request_count < p_max_requests
+    and char_count + p_chars <= p_max_chars;
+
+  return found;
+end;
+$$;
+
+revoke all on function public.consume_tts_quota(uuid, date, integer, integer, integer) from public;
+revoke all on function public.consume_tts_quota(uuid, date, integer, integer, integer) from anon, authenticated;
+grant execute on function public.consume_tts_quota(uuid, date, integer, integer, integer) to service_role;
+
 -- ─── Realtime voice session mints (rolling-window quota) ────────────────────
 create table if not exists public.realtime_session_usage (
   id uuid primary key default gen_random_uuid(),
@@ -100,9 +177,12 @@ create index if not exists realtime_session_usage_user_created_idx
 -- ─── Lock down: service role only ───────────────────────────────────────────
 alter table public.ai_coach_usage enable row level security;
 alter table public.realtime_session_usage enable row level security;
+alter table public.tts_usage enable row level security;
 
 revoke all on table public.ai_coach_usage from anon, authenticated;
 revoke all on table public.realtime_session_usage from anon, authenticated;
+revoke all on table public.tts_usage from anon, authenticated;
 
 grant select, insert, update, delete on table public.ai_coach_usage to service_role;
 grant select, insert, update, delete on table public.realtime_session_usage to service_role;
+grant select, insert, update, delete on table public.tts_usage to service_role;
