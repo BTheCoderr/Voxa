@@ -41,11 +41,11 @@ export function formatAuthError(error: AuthError, mode: 'sign_in' | 'sign_up'): 
   }
 
   if (code === 'email_not_confirmed' || msg.includes('email not confirmed')) {
-    return 'Confirm your email first, or turn off email confirmation in Supabase for beta testing.';
+    return 'Confirm your email first — check your inbox for the confirmation link.';
   }
 
   if (code === 'signup_disabled') {
-    return 'Sign up is disabled for this project. Ask the builder to enable it in Supabase.';
+    return 'New accounts can’t be created right now. Please try again later.';
   }
 
   if (mode === 'sign_up' && msg.includes('already')) {

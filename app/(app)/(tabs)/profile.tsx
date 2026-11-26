@@ -14,6 +14,7 @@ import { type LaunchLanguage } from '@/constants/scenarios';
 import { palette, spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { deleteCurrentAccount } from '@/lib/auth/deleteAccount';
+import { isDiagnosticsEnabled } from '@/lib/diagnostics/buildFlags';
 import { DEFAULT_LAUNCH_LANGUAGE, launchLanguageLabel } from '@/lib/learningPath/display';
 import {
   getPreferredLanguage,
@@ -220,11 +221,13 @@ export default function ProfileScreen() {
 
         <BetaDisclaimer />
 
-        <Pressable onPress={() => router.push('/(app)/debug-health')} style={styles.debugHit}>
-          <VoxaText variant="caption" style={styles.debug}>
-            Diagnostics
-          </VoxaText>
-        </Pressable>
+        {isDiagnosticsEnabled() ? (
+          <Pressable onPress={() => router.push('/(app)/debug-health')} style={styles.debugHit}>
+            <VoxaText variant="caption" style={styles.debug}>
+              Diagnostics
+            </VoxaText>
+          </Pressable>
+        ) : null}
       </ScrollView>
     </GradientBackground>
   );
