@@ -1,4 +1,4 @@
--- Regression checks for 20261126090000_usage_quota_tables.sql. Run after all migrations.
+-- Regression checks for 20261126114022_usage_quota_tables.sql. Run after all migrations.
 \set ON_ERROR_STOP on
 
 insert into auth.users (id) values

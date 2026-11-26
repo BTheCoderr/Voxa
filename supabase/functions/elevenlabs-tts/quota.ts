@@ -1,6 +1,6 @@
 /**
  * Per-user daily TTS quota decision (runtime-agnostic so it can be unit tested in Node).
- * Backed by `public.consume_tts_quota` (migration 20261126090000).
+ * Backed by `public.consume_tts_quota` (migration 20261126114022).
  */
 
 export const DEFAULT_TTS_DAILY_REQUEST_LIMIT = 60;

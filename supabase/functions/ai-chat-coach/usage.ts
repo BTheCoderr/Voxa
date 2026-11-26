@@ -79,7 +79,7 @@ export async function incrementDailyMessageCount(userId: string): Promise<void> 
 
   const usageDate = utcToday();
 
-  // Atomic increment (migration 20261126090000). Concurrent requests can no longer
+  // Atomic increment (migration 20261126114022). Concurrent requests can no longer
   // overwrite each other's count, which previously let a fast client exceed the quota.
   const { error: rpcError } = await admin.rpc("increment_ai_coach_usage", {
     p_user_id: userId,
@@ -123,7 +123,7 @@ function isMissingColumnError(error: { code?: string; message?: string }): boole
 }
 
 /**
- * Sessions started today from the server-side counter (migration 20261126090000).
+ * Sessions started today from the server-side counter (migration 20261126114022).
  * Returns "unsupported" when the column is not migrated yet, null on other errors.
  */
 export async function getSessionsStartedToday(
