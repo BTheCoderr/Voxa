@@ -35,7 +35,10 @@ async function reserveTtsQuota(userId: string, chars: number) {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  return consumeTtsQuota((args) => admin.rpc("consume_tts_quota", args), {
+  return consumeTtsQuota(async (args) => {
+    const { data, error } = await admin.rpc("consume_tts_quota", args);
+    return { data, error };
+  }, {
     userId,
     usageDate: new Date().toISOString().slice(0, 10),
     chars,
