@@ -62,12 +62,21 @@ export default function PrivacyScreen() {
         </VoxaText>
 
         <VoxaText variant="lead" style={styles.h2}>
+          Deleting your account
+        </VoxaText>
+        <VoxaText variant="body" style={styles.p}>
+          You can permanently delete your account at any time from Profile → Delete account. This
+          removes your account, synced practice history, corrections, progress, and usage records
+          from Voxa’s servers, and clears practice data stored on this device. Deletion cannot be
+          undone.
+        </VoxaText>
+
+        <VoxaText variant="lead" style={styles.h2}>
           Questions or data requests
         </VoxaText>
         <VoxaText variant="body" style={styles.p}>
-          Use the support contact listed on Voxa’s App Store or official product listing for privacy
-          questions or account/data requests. Release owners should keep this screen aligned with
-          the public Privacy Policy URL.
+          Use the support contact listed on Voxa’s App Store page or official website for privacy
+          questions or other data requests.
         </VoxaText>
       </ScrollView>
     </GradientBackground>
