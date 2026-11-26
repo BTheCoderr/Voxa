@@ -27,11 +27,11 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
     <GradientBackground>
       <SafeAreaView style={styles.errSafe}>
         <VoxaText variant="caption" style={styles.errBeta}>
-          Voxa · TestFlight beta
+          Voxa
         </VoxaText>
         <VoxaText variant="title">Something went wrong</VoxaText>
         <VoxaText variant="body" style={styles.errMsg}>
-          {error.message}
+          {__DEV__ ? error.message : 'Voxa hit an unexpected problem. Your saved progress is safe — try again.'}
         </VoxaText>
         <BetaDisclaimer compact />
         <VoxaButton title="Try again" onPress={() => void retry()} containerStyle={styles.errBtn} />

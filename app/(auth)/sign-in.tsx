@@ -177,7 +177,7 @@ export default function SignInScreen() {
     }
 
     trackEvent('sign_in_completed', { method: 'magic_link' });
-    Alert.alert('Check your email', 'We sent a sign-in link. Magic link is optional — password sign-in is faster for beta.');
+    Alert.alert('Check your email', 'We sent a sign-in link. Open it on this device to finish signing in.');
   };
 
   const primaryLabel = busy
