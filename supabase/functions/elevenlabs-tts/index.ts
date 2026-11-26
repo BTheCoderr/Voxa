@@ -8,7 +8,12 @@
  *
  * GET ?health=1 — safe status (no keys exposed)
  * POST { "text": "Voice test" } — minimal test (scenarioId/learningPath optional)
+ *
+ * POST requires a signed-in user's access token. `verify_jwt` alone also accepts the
+ * public anon key, which ships in the app bundle, so the user is checked in-function.
  */
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const MAX_TEXT_CHARS = 500;
 /** Lower cost; works on free-tier API access. */
@@ -59,6 +64,26 @@ function safeKeyPrefix(key: string): string {
   if (trimmed.startsWith("sk_")) return "sk_***";
   if (trimmed.length <= 4) return "***";
   return `${trimmed.slice(0, 3)}***`;
+}
+
+async function resolveUserId(req: Request): Promise<string | null> {
+  const raw = req.headers.get("Authorization")?.trim();
+  if (!raw?.toLowerCase().startsWith("bearer ")) return null;
+  const token = raw.slice(7).trim();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+  if (!token || !supabaseUrl || !anonKey) return null;
+
+  const client = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  try {
+    const { data, error } = await client.auth.getUser();
+    return error || !data.user ? null : data.user.id;
+  } catch {
+    return null;
+  }
 }
 
 function getApiKey(): string | null {
@@ -219,6 +244,11 @@ Deno.serve(async (req) => {
 
   if (req.method !== "POST") {
     return errorResponse("Method not allowed", 405, "method_not_allowed");
+  }
+
+  const userId = await resolveUserId(req);
+  if (!userId) {
+    return errorResponse("Sign in required. Please sign in again.", 401, "unauthorized");
   }
 
   if (!apiKey) {
