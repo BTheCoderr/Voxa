@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "check:config": "node scripts/check-mobile-config.mjs"
+    "check:config": "node scripts/check-mobile-config.mjs",
+    "test": "node --experimental-strip-types --test 'tests/**/*.test.mjs'"
   },
   "dependencies": {
     "@edkimmel/expo-audio-stream": "^0.4.2",

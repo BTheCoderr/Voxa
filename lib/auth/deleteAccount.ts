@@ -1,10 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import { getAnalyticsPosthog } from '@/lib/analytics/clientRef';
+import { keysToClearOnAccountDelete } from '@/lib/auth/localAccountData';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase/client';
 
 /**
  * Permanently deletes the signed-in Voxa account through the protected
- * Supabase Edge Function. The server remains responsible for deleting
- * auth data and any user-owned rows that are not removed by cascades.
+ * `delete-account` Supabase Edge Function (supabase/functions/delete-account).
+ * The server deletes user-owned rows and the auth user; this client then clears
+ * the local session and on-device practice data.
  */
 export async function deleteCurrentAccount(): Promise<void> {
   if (!env.supabaseConfigured || !env.deleteAccountUrl) {
@@ -21,15 +26,20 @@ export async function deleteCurrentAccount(): Promise<void> {
     throw new Error('You need to be signed in to delete your account.');
   }
 
-  const response = await fetch(env.deleteAccountUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: env.supabaseAnonKey,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ confirmation: 'DELETE' }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(env.deleteAccountUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: env.supabaseAnonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ confirmation: 'DELETE' }),
+    });
+  } catch {
+    throw new Error('Could not reach Voxa. Check your connection and try again.');
+  }
 
   if (!response.ok) {
     let message = 'We could not delete your account. Please try again.';
@@ -42,7 +52,22 @@ export async function deleteCurrentAccount(): Promise<void> {
     throw new Error(message);
   }
 
-  // Clear any persisted client session even if deleting the auth user already
-  // invalidated the token server-side.
-  await supabase.auth.signOut({ scope: 'local' });
+  // The account is gone server-side; local cleanup below is best-effort and must not
+  // surface as a deletion failure. RevenueCat logout follows the session change in AuthContext.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  await clearLocalAccountData();
+}
+
+async function clearLocalAccountData(): Promise<void> {
+  try {
+    const keys = keysToClearOnAccountDelete(await AsyncStorage.getAllKeys());
+    if (keys.length > 0) await AsyncStorage.multiRemove(keys);
+  } catch {
+    // Ignore storage failures; the server-side deletion already succeeded.
+  }
+  try {
+    getAnalyticsPosthog()?.reset();
+  } catch {
+    // Analytics are optional.
+  }
 }

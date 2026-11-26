@@ -40,7 +40,7 @@ export default function ProfileScreen() {
 
     Alert.alert(
       'Delete Voxa account?',
-      'This permanently deletes your Voxa account and server-stored practice data. This cannot be undone.',
+      'This permanently deletes your Voxa account, synced practice history, and progress, and clears practice data on this device. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -148,7 +148,7 @@ export default function ProfileScreen() {
                 )}
               </Pressable>
               <VoxaText variant="caption" style={styles.deleteDetail}>
-                Permanently removes your Voxa account and server-stored practice data.
+                Permanently removes your Voxa account, synced history, and on-device practice data.
               </VoxaText>
             </>
           )}
