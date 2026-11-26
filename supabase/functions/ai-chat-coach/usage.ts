@@ -67,11 +67,31 @@ export async function getDailyMessageCount(userId: string): Promise<number | nul
   return row?.message_count ?? 0;
 }
 
+/** PostgREST / Postgres codes meaning the increment RPC has not been migrated yet. */
+function isMissingFunctionError(error: { code?: string; message?: string }): boolean {
+  return error.code === "PGRST202" || error.code === "42883" ||
+    /could not find the function/i.test(error.message ?? "");
+}
+
 export async function incrementDailyMessageCount(userId: string): Promise<void> {
   const admin = getServiceAdmin();
   if (!admin) return;
 
   const usageDate = utcToday();
+
+  // Atomic increment (migration 20261126090000). Concurrent requests can no longer
+  // overwrite each other's count, which previously let a fast client exceed the quota.
+  const { error: rpcError } = await admin.rpc("increment_ai_coach_usage", {
+    p_user_id: userId,
+    p_usage_date: usageDate,
+  });
+  if (!rpcError) return;
+  if (!isMissingFunctionError(rpcError)) {
+    console.error(JSON.stringify({ event: "ai_coach_quota_rpc_error", code: rpcError.code ?? null }));
+    return;
+  }
+
+  // Legacy read-then-write path for projects where the migration is not applied yet.
   const current = await getDailyMessageCount(userId);
   if (current === null) return;
 
