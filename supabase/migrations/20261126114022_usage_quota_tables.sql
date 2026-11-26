@@ -1,3 +1,20 @@
+-- Production version 20261126114022 (applied 2026-11-26 to nsgrmaygwzdiyiijgpvd).
+-- The file was renamed from 20261126090000 to match the version recorded in
+-- supabase_migrations.schema_migrations, so `supabase db push` sees it as applied.
+--
+-- Compatibility (prepended at deploy time): production already had a hand-made
+-- `public.tts_usage` (legacy `play_count`, zero rows). `create table if not exists` below
+-- skips it, so add the columns consume_tts_quota needs. `play_count` is preserved.
+do $$
+begin
+  if to_regclass('public.tts_usage') is not null then
+    alter table public.tts_usage
+      add column if not exists request_count integer not null default 0 check (request_count >= 0),
+      add column if not exists char_count integer not null default 0 check (char_count >= 0);
+  end if;
+end;
+$$;
+
 -- Usage / quota tables used by Edge Functions.
 --
 -- `ai_coach_usage` is read and written by `ai-chat-coach` (daily text-coach message quota),

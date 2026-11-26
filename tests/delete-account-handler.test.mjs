@@ -50,6 +50,21 @@ test('deletes every user-owned table, then the auth user', async () => {
   assert.deepEqual(calls.deleteAuthUser, ['user-1']);
 });
 
+test('covers every user-scoped table created by migrations', async () => {
+  const { readFile, readdir } = await import('node:fs/promises');
+  const dir = new globalThis.URL('../supabase/migrations/', import.meta.url);
+  const created = new Set();
+  for (const name of await readdir(dir)) {
+    const sql = await readFile(new globalThis.URL(name, dir), 'utf8');
+    for (const m of sql.matchAll(/create table (?:if not exists )?public\.(\w+)\s*\(([\s\S]*?)\n\);/gi)) {
+      if (/\buser_id uuid\b|references auth\.users/i.test(m[2])) created.add(m[1]);
+    }
+  }
+  assert.ok(created.size >= 8, `expected to discover user tables, found ${[...created]}`);
+  const covered = new Set(USER_OWNED_TABLES.map((t) => t.table));
+  for (const table of created) assert.ok(covered.has(table), `${table} is not deleted by delete-account`);
+});
+
 test('profiles are matched on id, everything else on user_id', () => {
   for (const { table, userColumn } of USER_OWNED_TABLES) {
     assert.equal(userColumn, table === 'profiles' ? 'id' : 'user_id', table);

@@ -19,6 +19,7 @@ export const USER_OWNED_TABLES: ReadonlyArray<{ table: string; userColumn: strin
   { table: "user_progress", userColumn: "user_id" },
   { table: "ai_coach_usage", userColumn: "user_id" },
   { table: "realtime_session_usage", userColumn: "user_id" },
+  { table: "tts_usage", userColumn: "user_id" },
   { table: "profiles", userColumn: "id" },
 ];
 
