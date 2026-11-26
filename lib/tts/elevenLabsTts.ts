@@ -21,6 +21,8 @@ export type TtsHealthStatus = {
 
 type ErrorBody = { error?: string; code?: string; message?: string };
 
+const TTS_DAILY_LIMIT_MESSAGE = "You've reached today's voice playback limit. Try again tomorrow.";
+
 /** User-facing TTS error copy — maps thrown errors without exposing keys. */
 export function getTtsUserErrorMessage(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -40,6 +42,9 @@ export function getTtsUserErrorMessage(error: unknown): string {
   }
   if (raw.includes('sign in again')) {
     return 'Please sign in again.';
+  }
+  if (raw.includes('voice playback limit')) {
+    return TTS_DAILY_LIMIT_MESSAGE;
   }
   return 'Could not play voice right now.';
 }
@@ -76,6 +81,10 @@ function throwTtsHttpError(res: Response, json: ErrorBody | undefined, raw: stri
 
   if (res.status === 401 || res.status === 403) {
     throw new Error('Please sign in again.');
+  }
+
+  if (code === 'tts_daily_limit') {
+    throw new Error(TTS_DAILY_LIMIT_MESSAGE);
   }
 
   if (code === 'tts_provider_error' || code === 'tts_error' || code === 'tts_rate_limited') {

@@ -5,10 +5,47 @@
  *   ELEVENLABS_API_KEY — required (ElevenLabs API key, usually starts with sk_)
  *   ELEVENLABS_MODEL   — optional (default eleven_multilingual_v2)
  *   ELEVENLABS_DEFAULT_VOICE_ID — optional (default Rachel premade voice)
+ *   TTS_DAILY_REQUEST_LIMIT — optional per-user requests per UTC day (default 60)
+ *   TTS_DAILY_CHAR_LIMIT    — optional per-user characters per UTC day (default 15000)
  *
  * GET ?health=1 — safe status (no keys exposed)
  * POST { "text": "Voice test" } — minimal test (scenarioId/learningPath optional)
+ *
+ * POST requires a signed-in user's access token. `verify_jwt` alone also accepts the
+ * public anon key, which ships in the app bundle, so the user is checked in-function.
  */
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+import {
+  consumeTtsQuota,
+  DEFAULT_TTS_DAILY_CHAR_LIMIT,
+  DEFAULT_TTS_DAILY_REQUEST_LIMIT,
+} from "./quota.ts";
+
+function envInt(name: string, fallback: number): number {
+  const n = Number.parseInt(Deno.env.get(name)?.trim() ?? "", 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+async function reserveTtsQuota(userId: string, chars: number) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
+  if (!supabaseUrl || !serviceRoleKey) return "unavailable" as const;
+  const admin = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return consumeTtsQuota(async (args) => {
+    const { data, error } = await admin.rpc("consume_tts_quota", args);
+    return { data, error };
+  }, {
+    userId,
+    usageDate: new Date().toISOString().slice(0, 10),
+    chars,
+    maxRequests: envInt("TTS_DAILY_REQUEST_LIMIT", DEFAULT_TTS_DAILY_REQUEST_LIMIT),
+    maxChars: envInt("TTS_DAILY_CHAR_LIMIT", DEFAULT_TTS_DAILY_CHAR_LIMIT),
+  });
+}
 
 const MAX_TEXT_CHARS = 500;
 /** Lower cost; works on free-tier API access. */
@@ -59,6 +96,26 @@ function safeKeyPrefix(key: string): string {
   if (trimmed.startsWith("sk_")) return "sk_***";
   if (trimmed.length <= 4) return "***";
   return `${trimmed.slice(0, 3)}***`;
+}
+
+async function resolveUserId(req: Request): Promise<string | null> {
+  const raw = req.headers.get("Authorization")?.trim();
+  if (!raw?.toLowerCase().startsWith("bearer ")) return null;
+  const token = raw.slice(7).trim();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY")?.trim();
+  if (!token || !supabaseUrl || !anonKey) return null;
+
+  const client = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  try {
+    const { data, error } = await client.auth.getUser();
+    return error || !data.user ? null : data.user.id;
+  } catch {
+    return null;
+  }
 }
 
 function getApiKey(): string | null {
@@ -221,6 +278,11 @@ Deno.serve(async (req) => {
     return errorResponse("Method not allowed", 405, "method_not_allowed");
   }
 
+  const userId = await resolveUserId(req);
+  if (!userId) {
+    return errorResponse("Sign in required. Please sign in again.", 401, "unauthorized");
+  }
+
   if (!apiKey) {
     console.error(JSON.stringify({
       event: "elevenlabs_tts_misconfigured",
@@ -237,6 +299,22 @@ Deno.serve(async (req) => {
       return errorResponse(e.message, 400, "invalid_payload");
     }
     return errorResponse("Could not read request body", 400, "invalid_body");
+  }
+
+  const quota = await reserveTtsQuota(userId, body.text.length);
+  if (quota === "limited") {
+    return errorResponse(
+      "You've reached today's voice playback limit. Try again tomorrow.",
+      429,
+      "tts_daily_limit",
+    );
+  }
+  if (quota === "unavailable") {
+    console.error(JSON.stringify({ event: "elevenlabs_tts_quota_unavailable" }));
+    return errorResponse("Voice playback is temporarily unavailable.", 503, "usage_quota_error");
+  }
+  if (quota === "unmigrated") {
+    console.warn(JSON.stringify({ event: "elevenlabs_tts_quota_unmigrated" }));
   }
 
   const voiceId =
